@@ -50,20 +50,18 @@ pub struct CreateSongRequest {
     pub title: String,
     pub artist_ids: Vec<Uuid>,
     pub tags: Vec<SongTagAssignment>,
-    pub image_ids: Vec<Uuid>,
     /// Optional inline lyrics content. Creates a lyrics row in a single round trip.
     pub lyrics: Option<String>,
 }
 
 /// Request body for `PUT /api/songs/{id}`.
 ///
-/// Lyrics are excluded, use `PUT /api/songs/{id}/lyrics` instead.
+/// Lyrics and images are excluded, manage them via their respective subresources.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct UpdateSongRequest {
     pub title: String,
     pub artist_ids: Vec<Uuid>,
     pub tags: Vec<SongTagAssignment>,
-    pub image_ids: Vec<Uuid>,
 }
 
 /// Minimal song identity used when only the ID and title are needed.

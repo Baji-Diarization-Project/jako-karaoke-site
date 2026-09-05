@@ -243,9 +243,6 @@ pub(crate) async fn create_song(
     let tag_pairs = tag_pairs(&req.tags);
     queries::songs::set_original_artists(&mut tx, song.id, &req.artist_ids).await?;
     queries::songs::set_tags(&mut tx, song.id, &tag_pairs).await?;
-    let image_pairs: Vec<(Uuid, &str)> =
-        req.image_ids.iter().map(|&id| (id, "cover_art")).collect();
-    queries::songs::set_images(&mut tx, song.id, &image_pairs).await?;
 
     tx.commit().await.map_err(DbError::Sqlx)?;
 
@@ -284,9 +281,6 @@ pub(crate) async fn update_song(
     let tag_pairs = tag_pairs(&req.tags);
     queries::songs::set_original_artists(&mut tx, id, &req.artist_ids).await?;
     queries::songs::set_tags(&mut tx, id, &tag_pairs).await?;
-    let image_pairs: Vec<(Uuid, &str)> =
-        req.image_ids.iter().map(|&id| (id, "cover_art")).collect();
-    queries::songs::set_images(&mut tx, id, &image_pairs).await?;
 
     tx.commit().await.map_err(DbError::Sqlx)?;
 

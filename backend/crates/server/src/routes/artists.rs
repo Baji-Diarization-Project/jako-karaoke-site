@@ -91,13 +91,6 @@ async fn hydrate(pool: &MySqlPool, artist: db::models::Artist) -> Result<ArtistR
     })
 }
 
-fn image_pairs(inputs: &[ArtistImageInput]) -> Vec<(Uuid, &str)> {
-    inputs
-        .iter()
-        .map(|i| (i.image_id, i.kind.as_str()))
-        .collect()
-}
-
 fn new_links(inputs: Vec<ArtistLinkInput>) -> Vec<NewArtistLink> {
     inputs
         .into_iter()
@@ -198,7 +191,6 @@ pub(crate) async fn create_artist(
     if !auth.capabilities.contains(capabilities::ARTISTS_MANAGE_ANY) {
         return Err(ApiError::Forbidden);
     }
-    let image_pairs = image_pairs(&req.images);
     let new_links = new_links(req.links);
 
     let mut tx = state.pool.begin().await.map_err(DbError::Sqlx)?;
@@ -210,7 +202,6 @@ pub(crate) async fn create_artist(
         },
     )
     .await?;
-    queries::artists::set_images(&mut tx, artist.id, &image_pairs).await?;
     queries::artists::set_links(&mut tx, artist.id, &new_links).await?;
     tx.commit().await.map_err(DbError::Sqlx)?;
 
@@ -243,7 +234,6 @@ pub(crate) async fn update_artist(
     if !auth.capabilities.contains(capabilities::ARTISTS_MANAGE_ANY) {
         return Err(ApiError::Forbidden);
     }
-    let image_pairs = image_pairs(&req.images);
     let new_links = new_links(req.links);
 
     let mut tx = state.pool.begin().await.map_err(DbError::Sqlx)?;
@@ -257,7 +247,6 @@ pub(crate) async fn update_artist(
     )
     .await?
     .ok_or(ApiError::NotFound)?;
-    queries::artists::set_images(&mut tx, id, &image_pairs).await?;
     queries::artists::set_links(&mut tx, id, &new_links).await?;
     tx.commit().await.map_err(DbError::Sqlx)?;
 

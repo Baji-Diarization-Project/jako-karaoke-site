@@ -2951,7 +2951,6 @@
         "description": "Request body for `POST /api/artists`.",
         "required": [
           "name",
-          "images",
           "links"
         ],
         "properties": {
@@ -2960,12 +2959,6 @@
               "string",
               "null"
             ]
-          },
-          "images": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ArtistImageInput"
-            }
           },
           "links": {
             "type": "array",
@@ -3091,18 +3084,10 @@
         "required": [
           "title",
           "artist_ids",
-          "tags",
-          "image_ids"
+          "tags"
         ],
         "properties": {
           "artist_ids": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          "image_ids": {
             "type": "array",
             "items": {
               "type": "string",
@@ -3905,10 +3890,9 @@
       },
       "UpdateArtistRequest": {
         "type": "object",
-        "description": "Request body for `PUT /api/artists/{id}`.",
+        "description": "Request body for `PUT /api/artists/{id}`.\n\nImages are managed via the `/images` subresource.",
         "required": [
           "name",
-          "images",
           "links"
         ],
         "properties": {
@@ -3917,12 +3901,6 @@
               "string",
               "null"
             ]
-          },
-          "images": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ArtistImageInput"
-            }
           },
           "links": {
             "type": "array",
@@ -4049,22 +4027,14 @@
       },
       "UpdateSongRequest": {
         "type": "object",
-        "description": "Request body for `PUT /api/songs/{id}`.\n\nLyrics are excluded, use `PUT /api/songs/{id}/lyrics` instead.",
+        "description": "Request body for `PUT /api/songs/{id}`.\n\nLyrics and images are excluded, manage them via their respective subresources.",
         "required": [
           "title",
           "artist_ids",
-          "tags",
-          "image_ids"
+          "tags"
         ],
         "properties": {
           "artist_ids": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          "image_ids": {
             "type": "array",
             "items": {
               "type": "string",

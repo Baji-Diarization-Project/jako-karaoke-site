@@ -106,15 +106,15 @@ pub struct ArtistResponse {
 pub struct CreateArtistRequest {
     pub name: String,
     pub description: Option<String>,
-    pub images: Vec<ArtistImageInput>,
     pub links: Vec<ArtistLinkInput>,
 }
 
 /// Request body for `PUT /api/artists/{id}`.
+///
+/// Images are managed via the `/images` subresource.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct UpdateArtistRequest {
     pub name: String,
     pub description: Option<String>,
-    pub images: Vec<ArtistImageInput>,
     pub links: Vec<ArtistLinkInput>,
 }
