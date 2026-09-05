@@ -296,13 +296,23 @@ pub async fn set_tags(
     Ok(())
 }
 
-/// Returns the images for a song via the `song_images` join table.
+/// Returns the images for a song with their kind from the `song_images` join table.
 pub async fn get_images(
     executor: impl Executor<'_, Database = MySql>,
     song_id: Uuid,
-) -> Result<Vec<Image>> {
-    sqlx::query_as::<_, Image>(
-        "SELECT i.id, i.public_url, i.internal_path, i.credits \
+) -> Result<Vec<(Image, String)>> {
+    #[derive(sqlx::FromRow)]
+    struct Row {
+        id: Uuid,
+        hash: String,
+        public_url: String,
+        internal_path: Option<String>,
+        credits: Option<String>,
+        kind: String,
+    }
+
+    sqlx::query_as::<_, Row>(
+        "SELECT i.id, i.hash, i.public_url, i.internal_path, i.credits, si.kind \
          FROM images i \
          JOIN song_images si ON si.image_id = i.id \
          WHERE si.song_id = ?",
@@ -311,6 +321,22 @@ pub async fn get_images(
     .fetch_all(executor)
     .await
     .map_err(DbError::from)
+    .map(|rows| {
+        rows.into_iter()
+            .map(|r| {
+                (
+                    Image {
+                        id: r.id,
+                        hash: r.hash,
+                        public_url: r.public_url,
+                        internal_path: r.internal_path,
+                        credits: r.credits,
+                    },
+                    r.kind,
+                )
+            })
+            .collect()
+    })
 }
 
 /// Replaces the full set of images for a song.
@@ -319,17 +345,18 @@ pub async fn get_images(
 pub async fn set_images(
     conn: &mut MySqlConnection,
     song_id: Uuid,
-    image_ids: &[Uuid],
+    images: &[(Uuid, &str)],
 ) -> Result<()> {
     sqlx::query("DELETE FROM song_images WHERE song_id = ?")
         .bind(song_id)
         .execute(&mut *conn)
         .await
         .map_err(DbError::from)?;
-    for &image_id in image_ids {
-        sqlx::query("INSERT INTO song_images (song_id, image_id) VALUES (?, ?)")
+    for &(image_id, kind) in images {
+        sqlx::query("INSERT INTO song_images (song_id, image_id, kind) VALUES (?, ?, ?)")
             .bind(song_id)
             .bind(image_id)
+            .bind(kind)
             .execute(&mut *conn)
             .await
             .map_err(DbError::from)?;

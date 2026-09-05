@@ -3180,30 +3180,6 @@
           }
         }
       },
-      "ImageInfo": {
-        "type": "object",
-        "description": "An image record embedded in song responses.",
-        "required": [
-          "id",
-          "public_url"
-        ],
-        "properties": {
-          "credits": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "public_url": {
-            "type": "string",
-            "description": "Publicly served URL for clients."
-          }
-        }
-      },
       "LyricsResponse": {
         "type": "object",
         "description": "Response body for lyrics GET endpoints.",
@@ -3739,6 +3715,41 @@
           }
         }
       },
+      "SongImageInfo": {
+        "type": "object",
+        "description": "An image attached to a song with its semantic role.",
+        "required": [
+          "id",
+          "public_url",
+          "kind"
+        ],
+        "properties": {
+          "credits": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "public_url": {
+            "type": "string",
+            "description": "Publicly served URL for clients."
+          }
+        }
+      },
+      "SongImageKind": {
+        "type": "string",
+        "description": "Valid kind values for an image attached to a song.",
+        "enum": [
+          "cover_art"
+        ]
+      },
       "SongRef": {
         "type": "object",
         "description": "Minimal song identity used when only the ID and title are needed.",
@@ -3780,7 +3791,7 @@
           "images": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/ImageInfo"
+              "$ref": "#/components/schemas/SongImageInfo"
             }
           },
           "tags": {

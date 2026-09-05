@@ -21,15 +21,6 @@ pub struct TagInfo {
     pub kind: String,
 }
 
-/// An image record embedded in song responses.
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct ImageInfo {
-    pub id: Uuid,
-    /// Publicly served URL for clients.
-    pub public_url: String,
-    pub credits: Option<String>,
-}
-
 /// A media file (audio or video) embedded in performance responses.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct MediaInfo {

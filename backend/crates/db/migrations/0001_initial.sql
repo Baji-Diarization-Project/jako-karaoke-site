@@ -127,9 +127,11 @@ CREATE TABLE IF NOT EXISTS songs (
 ) ENGINE = InnoDB;
 
 -- Song <-> Image (M2M)
+-- kind denotes the semantic role of the image (e.g. "cover_art").
 CREATE TABLE IF NOT EXISTS song_images (
     song_id BINARY(16) NOT NULL REFERENCES songs (id) ON DELETE CASCADE,
     image_id BINARY(16) NOT NULL REFERENCES images (id) ON DELETE CASCADE,
+    kind VARCHAR(32) NOT NULL,
     PRIMARY KEY (song_id, image_id)
 ) ENGINE = InnoDB;
 

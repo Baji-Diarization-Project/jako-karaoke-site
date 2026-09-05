@@ -8,8 +8,34 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-use crate::common::{ArtistInfo, ImageInfo, TagInfo};
+use crate::common::{ArtistInfo, TagInfo};
 use crate::tags::SongTagKind;
+
+/// Valid kind values for an image attached to a song.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum SongImageKind {
+    CoverArt,
+}
+
+impl SongImageKind {
+    /// Returns the string stored in the database for this kind.
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::CoverArt => "cover_art",
+        }
+    }
+}
+
+/// An image attached to a song with its semantic role.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct SongImageInfo {
+    pub id: Uuid,
+    /// Publicly served URL for clients.
+    pub public_url: String,
+    pub credits: Option<String>,
+    pub kind: String,
+}
 
 /// A tag paired with its kind for application to a song.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -66,5 +92,5 @@ pub struct SongResponse {
     pub title: String,
     pub artists: Vec<ArtistInfo>,
     pub tags: Vec<TagInfo>,
-    pub images: Vec<ImageInfo>,
+    pub images: Vec<SongImageInfo>,
 }

@@ -11,10 +11,13 @@ use axum::{
 use uuid::Uuid;
 
 use api_types::{
-    common::{ArtistInfo, ErrorResponse, ImageInfo, TagInfo},
+    common::{ArtistInfo, ErrorResponse, TagInfo},
     lyrics::{LyricsResponse, UpdateLyricsRequest},
     pagination::{PagedResponse, SearchPaginationParams},
-    songs::{CreateSongRequest, SongResponse, SongSummary, SongTagAssignment, UpdateSongRequest},
+    songs::{
+        CreateSongRequest, SongImageInfo, SongImageKind, SongResponse, SongSummary,
+        SongTagAssignment, UpdateSongRequest,
+    },
     tags::SongTagKind,
 };
 use db::{
@@ -47,11 +50,12 @@ use crate::{
         UpdateSongRequest,
         SongTagAssignment,
         SongTagKind,
+        SongImageKind,
+        SongImageInfo,
         LyricsResponse,
         UpdateLyricsRequest,
         ArtistInfo,
         TagInfo,
-        ImageInfo,
         ErrorResponse,
         PagedResponse<SongSummary>,
     ))
@@ -98,10 +102,11 @@ async fn hydrate(pool: &MySqlPool, song: db::models::Song) -> Result<SongRespons
 
     let images = images
         .into_iter()
-        .map(|i| ImageInfo {
+        .map(|(i, kind)| SongImageInfo {
             id: i.id,
             public_url: i.public_url,
             credits: i.credits,
+            kind,
         })
         .collect();
 
@@ -238,7 +243,9 @@ pub(crate) async fn create_song(
     let tag_pairs = tag_pairs(&req.tags);
     queries::songs::set_original_artists(&mut tx, song.id, &req.artist_ids).await?;
     queries::songs::set_tags(&mut tx, song.id, &tag_pairs).await?;
-    queries::songs::set_images(&mut tx, song.id, &req.image_ids).await?;
+    let image_pairs: Vec<(Uuid, &str)> =
+        req.image_ids.iter().map(|&id| (id, "cover_art")).collect();
+    queries::songs::set_images(&mut tx, song.id, &image_pairs).await?;
 
     tx.commit().await.map_err(DbError::Sqlx)?;
 
@@ -277,7 +284,9 @@ pub(crate) async fn update_song(
     let tag_pairs = tag_pairs(&req.tags);
     queries::songs::set_original_artists(&mut tx, id, &req.artist_ids).await?;
     queries::songs::set_tags(&mut tx, id, &tag_pairs).await?;
-    queries::songs::set_images(&mut tx, id, &req.image_ids).await?;
+    let image_pairs: Vec<(Uuid, &str)> =
+        req.image_ids.iter().map(|&id| (id, "cover_art")).collect();
+    queries::songs::set_images(&mut tx, id, &image_pairs).await?;
 
     tx.commit().await.map_err(DbError::Sqlx)?;
 
