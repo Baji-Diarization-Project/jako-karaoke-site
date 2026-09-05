@@ -61,10 +61,12 @@ CREATE TABLE IF NOT EXISTS lyrics (
 -- Can be cover art, thumbnail, etc.
 CREATE TABLE IF NOT EXISTS images (
     id BINARY(16) NOT NULL DEFAULT (UNHEX(REPLACE(UUID_V7(), '-', ''))),
+    hash CHAR(64) NOT NULL,
     public_url VARCHAR(512) NOT NULL,
     internal_path VARCHAR(512) NULL,
     credits TEXT NULL,
-    PRIMARY KEY (id)
+    PRIMARY KEY (id),
+    UNIQUE INDEX (hash)
 ) ENGINE = InnoDB;
 
 -- Playlists
