@@ -16,10 +16,6 @@ function isArtistLinkKind(value: string): value is ArtistLinkKind {
   return (ARTIST_LINK_KINDS as readonly string[]).includes(value);
 }
 
-function isAvatarKind(value: string): value is "avatar" {
-  return value === "avatar";
-}
-
 function linkDraftFromInfo(link: { url: string; kind: string; label?: string | null }): LinkDraft {
   return {
     url: link.url,
@@ -54,7 +50,6 @@ export function ArtistDetailPanel({
       const { error: apiError } = await artistsApi.create({
         name: editName.trim(),
         description: editDescription.trim() !== "" ? editDescription.trim() : null,
-        images: [],
         links: validLinks.map((link) => ({
           url: link.url.trim(),
           kind: link.kind,
@@ -79,10 +74,6 @@ export function ArtistDetailPanel({
       const { error: apiError } = await artistsApi.update(artist.id, {
         name: editName.trim(),
         description: editDescription.trim() !== "" ? editDescription.trim() : null,
-        images: (artistDetail?.images ?? []).map((img) => ({
-          image_id: img.id,
-          kind: isAvatarKind(img.kind) ? img.kind : ("avatar" as const),
-        })),
         links: validLinks.map((link) => ({
           url: link.url.trim(),
           kind: link.kind,

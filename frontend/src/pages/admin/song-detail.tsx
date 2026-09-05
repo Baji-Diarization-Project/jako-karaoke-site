@@ -44,7 +44,6 @@ export function SongDetailPanel({
       const { error: apiError } = await songsApi.create({
         title: editTitle.trim(),
         artist_ids: editArtistIds,
-        image_ids: [],
         tags: resolvedTags,
       });
       if (apiError) throw apiError;
@@ -71,7 +70,6 @@ export function SongDetailPanel({
       const { error: apiError } = await songsApi.update(song.id, {
         title: editTitle.trim(),
         artist_ids: editArtistIds,
-        image_ids: songDetail?.images.map((image) => image.id) ?? [],
         tags: resolvedTags,
       });
       if (apiError) throw apiError;
