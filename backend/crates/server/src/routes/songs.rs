@@ -1,12 +1,13 @@
 //! Song CRUD handlers and the `SongsApi` OpenAPI spec struct.
 
+pub(crate) mod images;
 pub(crate) mod lyrics;
 
 use axum::{
     Json, Router,
-    extract::{Path, Query, State},
+    extract::{DefaultBodyLimit, Path, Query, State},
     http::StatusCode,
-    routing::get,
+    routing::{delete, get, post},
 };
 use uuid::Uuid;
 
@@ -39,6 +40,8 @@ use crate::{
         create_song,
         update_song,
         delete_song,
+        images::upload_song_image,
+        images::delete_song_image,
         lyrics::get_song_lyrics,
         lyrics::put_song_lyrics,
         lyrics::delete_song_lyrics,
@@ -52,6 +55,7 @@ use crate::{
         SongTagKind,
         SongImageKind,
         SongImageInfo,
+        images::ImageUpload,
         LyricsResponse,
         UpdateLyricsRequest,
         ArtistInfo,
@@ -66,6 +70,11 @@ pub fn router() -> Router<AppState> {
     Router::new()
         .route("/", get(list_songs).post(create_song))
         .route("/{id}", get(get_song).put(update_song).delete(delete_song))
+        .route(
+            "/{id}/images",
+            post(images::upload_song_image).layer(DefaultBodyLimit::max(50 * 1024 * 1024)),
+        )
+        .route("/{id}/images/{image_id}", delete(images::delete_song_image))
         .route(
             "/{id}/lyrics",
             get(lyrics::get_song_lyrics)

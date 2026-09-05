@@ -1,4 +1,4 @@
-//! Media type resolution for uploaded audio and video files.
+//! Media type resolution for uploaded audio, video, and image files.
 
 use crate::error::ApiError;
 
@@ -6,10 +6,12 @@ use crate::error::ApiError;
 pub enum MediaKind {
     Audio,
     Video,
+    Image,
 }
 
 const AUDIO_EXTS: &[&str] = &["mp3", "ogg", "wav", "flac", "aac", "m4a"];
 const VIDEO_EXTS: &[&str] = &["mp4", "webm", "ogv", "mov", "mkv"];
+const IMAGE_EXTS: &[&str] = &["jpg", "jpeg", "png", "webp", "avif", "gif"];
 
 /// Resolves the stored file extension for a media upload.
 ///
@@ -29,6 +31,7 @@ pub fn resolve_ext(
     let allowed = match kind {
         MediaKind::Audio => AUDIO_EXTS,
         MediaKind::Video => VIDEO_EXTS,
+        MediaKind::Image => IMAGE_EXTS,
     };
 
     // Strip MIME parameters (e.g. "audio/mpeg; codecs=mp3")

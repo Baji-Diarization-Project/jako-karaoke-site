@@ -339,6 +339,38 @@ pub async fn get_images(
     })
 }
 
+/// Inserts a single `song_images` join row.
+pub async fn link_image(
+    conn: &mut MySqlConnection,
+    song_id: Uuid,
+    image_id: Uuid,
+    kind: &str,
+) -> Result<()> {
+    sqlx::query("INSERT IGNORE INTO song_images (song_id, image_id, kind) VALUES (?, ?, ?)")
+        .bind(song_id)
+        .bind(image_id)
+        .bind(kind)
+        .execute(conn)
+        .await
+        .map(|_| ())
+        .map_err(DbError::from)
+}
+
+/// Removes a single `song_images` join row. Returns `true` if a row was deleted.
+pub async fn unlink_image(
+    executor: impl Executor<'_, Database = MySql>,
+    song_id: Uuid,
+    image_id: Uuid,
+) -> Result<bool> {
+    sqlx::query("DELETE FROM song_images WHERE song_id = ? AND image_id = ?")
+        .bind(song_id)
+        .bind(image_id)
+        .execute(executor)
+        .await
+        .map(|r| r.rows_affected() > 0)
+        .map_err(DbError::from)
+}
+
 /// Replaces the full set of images for a song.
 ///
 /// Must be called within a caller provided transaction for atomicity.

@@ -291,6 +291,163 @@
         ]
       }
     },
+    "/api/artists/{id}/images": {
+      "post": {
+        "tags": [
+          "artists"
+        ],
+        "operationId": "upload_artist_image",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Artist ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ImageUpload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Image uploaded and linked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArtistImageInfo"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Artist not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/artists/{id}/images/{image_id}": {
+      "delete": {
+        "tags": [
+          "artists"
+        ],
+        "operationId": "delete_artist_image",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Artist ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "image_id",
+            "in": "path",
+            "description": "Image ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
     "/api/capabilities": {
       "get": {
         "tags": [
@@ -1793,6 +1950,163 @@
         ]
       }
     },
+    "/api/songs/{id}/images": {
+      "post": {
+        "tags": [
+          "songs"
+        ],
+        "operationId": "upload_song_image",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Song ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ImageUpload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Image uploaded and linked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SongImageInfo"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Song not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/songs/{id}/images/{image_id}": {
+      "delete": {
+        "tags": [
+          "songs"
+        ],
+        "operationId": "delete_song_image",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Song ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "image_id",
+            "in": "path",
+            "description": "Image ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
     "/api/songs/{id}/lyrics": {
       "get": {
         "tags": [
@@ -2758,23 +3072,6 @@
           }
         }
       },
-      "ArtistImageInput": {
-        "type": "object",
-        "description": "Input for attaching an existing image to an artist.",
-        "required": [
-          "image_id",
-          "kind"
-        ],
-        "properties": {
-          "image_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "kind": {
-            "$ref": "#/components/schemas/ArtistImageKind"
-          }
-        }
-      },
       "ArtistImageKind": {
         "type": "string",
         "description": "Valid kind values for an image attached to an artist.",
@@ -3162,6 +3459,34 @@
         "properties": {
           "capability": {
             "type": "string"
+          }
+        }
+      },
+      "ImageUpload": {
+        "type": "object",
+        "description": "Placeholder schema for image multipart upload bodies.",
+        "required": [
+          "file",
+          "kind"
+        ],
+        "properties": {
+          "credits": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "file": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "binary",
+              "minimum": 0
+            }
+          },
+          "kind": {
+            "type": "string",
+            "description": "Semantic role of the image. See [`ArtistImageKind`](api_types::artists::ArtistImageKind)."
           }
         }
       },

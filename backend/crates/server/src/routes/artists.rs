@@ -1,17 +1,19 @@
 //! Artist CRUD handlers and the `ArtistsApi` OpenAPI spec struct.
 
+pub(crate) mod images;
+
 use axum::{
     Json, Router,
-    extract::{Path, Query, State},
+    extract::{DefaultBodyLimit, Path, Query, State},
     http::StatusCode,
-    routing::get,
+    routing::{delete, get, post},
 };
 use uuid::Uuid;
 
 use api_types::{
     artists::{
-        ArtistImageInfo, ArtistImageInput, ArtistImageKind, ArtistLinkInfo, ArtistLinkInput,
-        ArtistLinkKind, ArtistResponse, ArtistSummary, CreateArtistRequest, UpdateArtistRequest,
+        ArtistImageInfo, ArtistImageKind, ArtistLinkInfo, ArtistLinkInput, ArtistLinkKind,
+        ArtistResponse, ArtistSummary, CreateArtistRequest, UpdateArtistRequest,
     },
     common::ErrorResponse,
     pagination::{PagedResponse, SearchPaginationParams},
@@ -29,18 +31,26 @@ use crate::{
 
 #[derive(utoipa::OpenApi)]
 #[openapi(
-    paths(list_artists, get_artist, create_artist, update_artist, delete_artist),
+    paths(
+        list_artists,
+        get_artist,
+        create_artist,
+        update_artist,
+        delete_artist,
+        images::upload_artist_image,
+        images::delete_artist_image,
+    ),
     components(schemas(
         ArtistSummary,
         ArtistResponse,
         ArtistImageInfo,
-        ArtistImageInput,
         ArtistImageKind,
         ArtistLinkInfo,
         ArtistLinkInput,
         ArtistLinkKind,
         CreateArtistRequest,
         UpdateArtistRequest,
+        images::ImageUpload,
         ErrorResponse,
         PagedResponse<ArtistSummary>,
     ))
@@ -53,6 +63,14 @@ pub fn router() -> Router<AppState> {
         .route(
             "/{id}",
             get(get_artist).put(update_artist).delete(delete_artist),
+        )
+        .route(
+            "/{id}/images",
+            post(images::upload_artist_image).layer(DefaultBodyLimit::max(50 * 1024 * 1024)),
+        )
+        .route(
+            "/{id}/images/{image_id}",
+            delete(images::delete_artist_image),
         )
 }
 
