@@ -123,7 +123,7 @@ CREATE TABLE IF NOT EXISTS songs (
     created_by BINARY(16) NULL REFERENCES users (id) ON DELETE SET NULL,
     lyrics_id BINARY(16) NULL REFERENCES lyrics (id) ON DELETE SET NULL,
     PRIMARY KEY (id),
-    INDEX (title)
+    UNIQUE INDEX (title)
 ) ENGINE = InnoDB;
 
 -- Song <-> Image (M2M)

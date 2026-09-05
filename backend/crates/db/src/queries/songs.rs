@@ -112,6 +112,8 @@ pub async fn search_count(
 }
 
 /// Inserts a new song and returns the created row.
+///
+/// Returns [`DbError::Conflict`] if a song with the same title already exists.
 pub async fn create(conn: &mut MySqlConnection, new: &NewSong) -> Result<Song> {
     sqlx::query_as::<_, Song>(
         "INSERT INTO songs (title, created_by, lyrics_id) VALUES (?, ?, ?) \
@@ -122,10 +124,15 @@ pub async fn create(conn: &mut MySqlConnection, new: &NewSong) -> Result<Song> {
     .bind(new.lyrics_id)
     .fetch_one(conn)
     .await
-    .map_err(DbError::from)
+    .map_err(|e| match e {
+        sqlx::Error::Database(ref db) if db.is_unique_violation() => DbError::Conflict,
+        other => DbError::Sqlx(other),
+    })
 }
 
 /// Updates a song's mutable fields. Returns `None` if the ID does not exist.
+///
+/// Returns [`DbError::Conflict`] if the new title is already taken by another song.
 pub async fn update(
     conn: &mut MySqlConnection,
     id: Uuid,
@@ -136,7 +143,10 @@ pub async fn update(
         .bind(id)
         .execute(&mut *conn)
         .await
-        .map_err(DbError::from)?;
+        .map_err(|e| match e {
+            sqlx::Error::Database(ref db) if db.is_unique_violation() => DbError::Conflict,
+            other => DbError::Sqlx(other),
+        })?;
     get_by_id(&mut *conn, id).await
 }
 

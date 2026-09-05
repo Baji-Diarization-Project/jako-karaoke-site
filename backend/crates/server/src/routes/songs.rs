@@ -217,6 +217,7 @@ pub(crate) async fn get_song(
         (status = 201, description = "Created song", body = SongResponse),
         (status = 401, description = "Unauthorized", body = ErrorResponse),
         (status = 403, description = "Forbidden", body = ErrorResponse),
+        (status = 409, description = "Title already taken", body = ErrorResponse),
     ),
     tag = "songs",
     security(("session" = []))
@@ -268,6 +269,7 @@ pub(crate) async fn create_song(
         (status = 401, description = "Unauthorized", body = ErrorResponse),
         (status = 403, description = "Forbidden", body = ErrorResponse),
         (status = 404, description = "Not found", body = ErrorResponse),
+        (status = 409, description = "Title already taken", body = ErrorResponse),
     ),
     tag = "songs",
     security(("session" = []))
