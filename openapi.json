@@ -3461,12 +3461,8 @@
         ],
         "properties": {
           "file": {
-            "type": "array",
-            "items": {
-              "type": "integer",
-              "format": "binary",
-              "minimum": 0
-            }
+            "type": "string",
+            "format": "binary"
           }
         }
       },
@@ -3497,12 +3493,8 @@
             ]
           },
           "file": {
-            "type": "array",
-            "items": {
-              "type": "integer",
-              "format": "binary",
-              "minimum": 0
-            }
+            "type": "string",
+            "format": "binary"
           },
           "kind": {
             "type": "string",

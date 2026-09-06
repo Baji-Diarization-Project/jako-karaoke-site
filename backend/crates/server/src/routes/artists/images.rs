@@ -18,7 +18,7 @@ use crate::{auth::middleware::AuthUser, capabilities, error::ApiError, media, st
 #[derive(utoipa::ToSchema)]
 #[allow(dead_code)]
 pub(crate) struct ImageUpload {
-    #[schema(format = Binary)]
+    #[schema(value_type = String, format = Binary)]
     pub file: Vec<u8>,
     /// Semantic role of the image. See [`ArtistImageKind`](api_types::artists::ArtistImageKind).
     pub kind: String,

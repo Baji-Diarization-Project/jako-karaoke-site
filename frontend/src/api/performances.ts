@@ -5,6 +5,7 @@ import type { SearchPaginationParams } from "./types";
 export type PerformanceSummary = components["schemas"]["PerformanceSummary"];
 export type PerformanceResponse = components["schemas"]["PerformanceResponse"];
 export type PerformanceTagKind = components["schemas"]["PerformanceTagKind"];
+export type MediaInfo = components["schemas"]["MediaInfo"];
 
 export const PERFORMANCE_TAG_KINDS = [
   "instrument",
@@ -46,4 +47,22 @@ export const performancesApi = {
 
   /** Deletes a performance by ID. */
   delete: (id: string) => api.DELETE("/api/performances/{id}", { params: { path: { id } } }),
+
+  /** Uploads an audio file for a performance. */
+  uploadAudio: (id: string, file: File) =>
+    api.POST("/api/performances/{id}/audio", {
+      params: { path: { id } },
+      body: { file: "" } satisfies components["schemas"]["FileUpload"],
+      bodySerializer: () => {
+        const form = new FormData();
+        form.append("file", file);
+        return form;
+      },
+    }),
+
+  /** Removes an audio file from a performance. */
+  deleteAudio: (id: string, audioId: string) =>
+    api.DELETE("/api/performances/{id}/audio/{audio_id}", {
+      params: { path: { id, audio_id: audioId } },
+    }),
 };

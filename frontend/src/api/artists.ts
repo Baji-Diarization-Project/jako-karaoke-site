@@ -5,6 +5,7 @@ import type { SearchPaginationParams } from "./types";
 export type ArtistSummary = components["schemas"]["ArtistSummary"];
 export type ArtistResponse = components["schemas"]["ArtistResponse"];
 export type ArtistLinkInfo = components["schemas"]["ArtistLinkInfo"];
+export type ArtistImageInfo = components["schemas"]["ArtistImageInfo"];
 export type ArtistImageKind = components["schemas"]["ArtistImageKind"];
 
 export const ARTIST_LINK_KINDS = [
@@ -35,4 +36,28 @@ export const artistsApi = {
 
   /** Deletes an artist by ID. */
   delete: (id: string) => api.DELETE("/api/artists/{id}", { params: { path: { id } } }),
+
+  /** Uploads and links an image to an artist. */
+  uploadImage: (id: string, file: File, kind: string, credits?: string | null) =>
+    api.POST("/api/artists/{id}/images", {
+      params: { path: { id } },
+      body: {
+        file: "",
+        kind,
+        credits: credits ?? null,
+      } satisfies components["schemas"]["ImageUpload"],
+      bodySerializer: () => {
+        const form = new FormData();
+        form.append("file", file);
+        form.append("kind", kind);
+        if (credits) form.append("credits", credits);
+        return form;
+      },
+    }),
+
+  /** Removes an image link from an artist, deleting the image file if no other resource references it. */
+  deleteImage: (id: string, imageId: string) =>
+    api.DELETE("/api/artists/{id}/images/{image_id}", {
+      params: { path: { id, image_id: imageId } },
+    }),
 };
