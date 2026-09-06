@@ -12,7 +12,7 @@ use axum::{
     Router,
     http::{HeaderValue, Method, header::CONTENT_TYPE},
 };
-use tower_http::{cors::CorsLayer, trace::TraceLayer};
+use tower_http::{cors::CorsLayer, services::ServeDir, trace::TraceLayer};
 
 use crate::{auth, docs, state::AppState};
 
@@ -23,6 +23,7 @@ pub fn build_router(state: AppState) -> Router {
         .frontend_url
         .parse::<HeaderValue>()
         .expect("FRONTEND_URL must be a valid HTTP origin");
+    let storage_path = state.config.storage_path.clone();
     let cors = CorsLayer::new()
         .allow_origin(cors_origin)
         .allow_credentials(true)
@@ -37,6 +38,7 @@ pub fn build_router(state: AppState) -> Router {
         .nest("/api/tags", tags::router())
         .nest("/api/users", users::router())
         .nest("/auth", auth::router())
+        .nest_service("/files", ServeDir::new(storage_path))
         .merge(docs::router())
         .layer(TraceLayer::new_for_http())
         .layer(cors)
