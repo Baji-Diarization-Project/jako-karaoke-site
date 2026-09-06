@@ -1,11 +1,19 @@
+import { TrashIcon } from "@phosphor-icons/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
-import { SONG_TAG_KINDS, songsApi, type SongSummary, type SongTagKind } from "@/api/songs";
+import {
+  SONG_TAG_KINDS,
+  songsApi,
+  type SongImageInfo,
+  type SongSummary,
+  type SongTagKind,
+} from "@/api/songs";
 import { tagsApi } from "@/api/tags";
 import { useArtists } from "@/hooks/api/artists";
 import { songKeys, useSong } from "@/hooks/api/songs";
 import { tagKeys, useTags } from "@/hooks/api/tags";
+import { applyAll } from "@/lib/staging";
 
 import { ItemPicker, TagPicker, type TagAssignment } from "./pickers";
 import { resolveTagAssignments } from "./tag-utils";
@@ -23,8 +31,12 @@ export function SongDetailPanel({
   const [editTitle, setEditTitle] = useState("");
   const [editArtistIds, setEditArtistIds] = useState<string[]>([]);
   const [editTags, setEditTags] = useState<TagAssignment<SongTagKind>[]>([]);
+  const [stagingAddImages, setStagingAddImages] = useState<File[]>([]);
+  const [pendingRemoveIds, setPendingRemoveIds] = useState<Set<string>>(new Set());
   const [formError, setFormError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   const queryClient = useQueryClient();
   const isFormOpen = isCreating || isEditing;
@@ -41,12 +53,14 @@ export function SongDetailPanel({
         if (!data) throw new Error("Tag creation returned no data.");
         return data.id;
       });
-      const { error: apiError } = await songsApi.create({
+      const { data, error: apiError } = await songsApi.create({
         title: editTitle.trim(),
         artist_ids: editArtistIds,
         tags: resolvedTags,
       });
       if (apiError) throw apiError;
+      if (!data) throw new Error("Song creation returned no data.");
+      await applyAll(stagingAddImages, (file) => songsApi.uploadImage(data.id, file, "cover_art"));
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: songKeys.all() });
@@ -73,10 +87,14 @@ export function SongDetailPanel({
         tags: resolvedTags,
       });
       if (apiError) throw apiError;
+      await applyAll(stagingAddImages, (file) => songsApi.uploadImage(song.id, file, "cover_art"));
+      await applyAll(pendingRemoveIds, (id) => songsApi.deleteImage(song.id, id));
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: songKeys.all() });
       void queryClient.invalidateQueries({ queryKey: tagKeys.all() });
+      setStagingAddImages([]);
+      setPendingRemoveIds(new Set());
       setIsEditing(false);
       setFormError(null);
     },
@@ -111,11 +129,15 @@ export function SongDetailPanel({
         kind: SONG_TAG_KINDS.find((k) => k === tag.kind) ?? "misc",
       })),
     );
+    setStagingAddImages([]);
+    setPendingRemoveIds(new Set());
     setFormError(null);
     setIsEditing(true);
   }
 
   function cancelEditing() {
+    setStagingAddImages([]);
+    setPendingRemoveIds(new Set());
     setIsEditing(false);
     setFormError(null);
   }
@@ -154,6 +176,7 @@ export function SongDetailPanel({
 
   if (isFormOpen) {
     const isPending = isCreating ? createMutation.isPending : updateMutation.isPending;
+    const existingImages = isEditing ? (songDetail?.images ?? []) : [];
     return (
       <>
         <div className="admin-panel-header">
@@ -214,6 +237,65 @@ export function SongDetailPanel({
             onRemove={removeTag}
             onKindChange={changeTagKind}
           />
+          <div className="form-field">
+            <div className="admin-link-card-header">
+              <span className="form-label">Images</span>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  imageInputRef.current?.click();
+                }}
+              >
+                Add image
+              </button>
+            </div>
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) setStagingAddImages((prev) => [...prev, file]);
+                event.target.value = "";
+              }}
+            />
+            {existingImages.filter((img) => !pendingRemoveIds.has(img.id)).length > 0 && (
+              <div className="admin-image-list">
+                {existingImages
+                  .filter((img) => !pendingRemoveIds.has(img.id))
+                  .map((img) => (
+                    <div key={img.id} className="admin-image-item">
+                      <img src={img.public_url} alt={img.kind} />
+                      <button
+                        type="button"
+                        className="admin-image-delete"
+                        onClick={() => {
+                          setPendingRemoveIds((prev) => new Set([...prev, img.id]));
+                        }}
+                      >
+                        <TrashIcon weight="bold" />
+                      </button>
+                    </div>
+                  ))}
+              </div>
+            )}
+            {stagingAddImages.map((file, index) => (
+              <div key={index} className="admin-audio-item">
+                <span className="text-sm text-fg-muted">{file.name}</span>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    setStagingAddImages((prev) => prev.filter((_, i) => i !== index));
+                  }}
+                >
+                  <TrashIcon weight="bold" />
+                </button>
+              </div>
+            ))}
+          </div>
           {formError !== null && <p className="form-error">{formError}</p>}
         </div>
       </>
@@ -288,6 +370,18 @@ export function SongDetailPanel({
                     {tag.name}
                     <span className="admin-pill-kind">{tag.kind}</span>
                   </span>
+                ))}
+              </div>
+            </div>
+          )}
+          {songDetail.images.length > 0 && (
+            <div className="admin-detail-section">
+              <span className="admin-detail-label">Images</span>
+              <div className="admin-image-list">
+                {songDetail.images.map((image: SongImageInfo) => (
+                  <div key={image.id} className="admin-image-item">
+                    <img src={image.public_url} alt={image.kind} />
+                  </div>
                 ))}
               </div>
             </div>

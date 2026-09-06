@@ -1,14 +1,16 @@
-import { XIcon } from "@phosphor-icons/react";
+import { TrashIcon, XIcon } from "@phosphor-icons/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import {
   ARTIST_LINK_KINDS,
   artistsApi,
+  type ArtistImageInfo,
   type ArtistLinkKind,
   type ArtistSummary,
 } from "@/api/artists";
 import { artistKeys, useArtist } from "@/hooks/api/artists";
+import { applyAll } from "@/lib/staging";
 
 type LinkDraft = { url: string; kind: ArtistLinkKind; label: string };
 
@@ -37,8 +39,12 @@ export function ArtistDetailPanel({
   const [editName, setEditName] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [editLinks, setEditLinks] = useState<LinkDraft[]>([]);
+  const [stagingAddImages, setStagingAddImages] = useState<File[]>([]);
+  const [pendingRemoveIds, setPendingRemoveIds] = useState<Set<string>>(new Set());
   const [formError, setFormError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   const queryClient = useQueryClient();
 
@@ -47,7 +53,7 @@ export function ArtistDetailPanel({
   const createMutation = useMutation({
     mutationFn: async () => {
       const validLinks = editLinks.filter((link) => link.url.trim() !== "");
-      const { error: apiError } = await artistsApi.create({
+      const { data, error: apiError } = await artistsApi.create({
         name: editName.trim(),
         description: editDescription.trim() !== "" ? editDescription.trim() : null,
         links: validLinks.map((link) => ({
@@ -57,6 +63,8 @@ export function ArtistDetailPanel({
         })),
       });
       if (apiError) throw apiError;
+      if (!data) throw new Error("Artist creation returned no data.");
+      await applyAll(stagingAddImages, (file) => artistsApi.uploadImage(data.id, file, "avatar"));
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: artistKeys.all() });
@@ -81,9 +89,13 @@ export function ArtistDetailPanel({
         })),
       });
       if (apiError) throw apiError;
+      await applyAll(stagingAddImages, (file) => artistsApi.uploadImage(artist.id, file, "avatar"));
+      await applyAll(pendingRemoveIds, (id) => artistsApi.deleteImage(artist.id, id));
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: artistKeys.all() });
+      setStagingAddImages([]);
+      setPendingRemoveIds(new Set());
       setIsEditing(false);
       setFormError(null);
     },
@@ -112,11 +124,15 @@ export function ArtistDetailPanel({
     setEditName(artistDetail.name);
     setEditDescription(artistDetail.description ?? "");
     setEditLinks(artistDetail.links.map(linkDraftFromInfo));
+    setStagingAddImages([]);
+    setPendingRemoveIds(new Set());
     setFormError(null);
     setIsEditing(true);
   }
 
   function cancelEditing() {
+    setStagingAddImages([]);
+    setPendingRemoveIds(new Set());
     setIsEditing(false);
     setFormError(null);
   }
@@ -137,6 +153,7 @@ export function ArtistDetailPanel({
 
   if (isCreating || isEditing) {
     const isPending = isCreating ? createMutation.isPending : updateMutation.isPending;
+    const existingImages = isEditing ? (artistDetail?.images ?? []) : [];
     return (
       <>
         <div className="admin-panel-header">
@@ -250,6 +267,65 @@ export function ArtistDetailPanel({
               </button>
             </div>
           </div>
+          <div className="form-field">
+            <div className="admin-link-card-header">
+              <span className="form-label">Images</span>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  imageInputRef.current?.click();
+                }}
+              >
+                Add image
+              </button>
+            </div>
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) setStagingAddImages((prev) => [...prev, file]);
+                event.target.value = "";
+              }}
+            />
+            {existingImages.filter((img) => !pendingRemoveIds.has(img.id)).length > 0 && (
+              <div className="admin-image-list">
+                {existingImages
+                  .filter((img) => !pendingRemoveIds.has(img.id))
+                  .map((img) => (
+                    <div key={img.id} className="admin-image-item">
+                      <img src={img.public_url} alt={img.kind} />
+                      <button
+                        type="button"
+                        className="admin-image-delete"
+                        onClick={() => {
+                          setPendingRemoveIds((prev) => new Set([...prev, img.id]));
+                        }}
+                      >
+                        <TrashIcon weight="bold" />
+                      </button>
+                    </div>
+                  ))}
+              </div>
+            )}
+            {stagingAddImages.map((file, index) => (
+              <div key={index} className="admin-audio-item">
+                <span className="text-sm text-fg-muted">{file.name}</span>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    setStagingAddImages((prev) => prev.filter((_, i) => i !== index));
+                  }}
+                >
+                  <TrashIcon weight="bold" />
+                </button>
+              </div>
+            ))}
+          </div>
           {formError !== null && <p className="form-error">{formError}</p>}
         </div>
       </>
@@ -320,6 +396,18 @@ export function ArtistDetailPanel({
                       {link.label ?? link.url}
                     </a>
                     {link.label && <span className="admin-link-label">{link.url}</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {artistDetail.images.length > 0 && (
+            <div className="admin-detail-section">
+              <span className="admin-detail-label">Images</span>
+              <div className="admin-image-list">
+                {artistDetail.images.map((image: ArtistImageInfo) => (
+                  <div key={image.id} className="admin-image-item">
+                    <img src={image.public_url} alt={image.kind} />
                   </div>
                 ))}
               </div>
