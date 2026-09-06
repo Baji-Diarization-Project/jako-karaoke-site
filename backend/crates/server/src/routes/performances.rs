@@ -12,12 +12,12 @@ use tracing::error;
 use uuid::Uuid;
 
 use api_types::{
-    common::{ArtistInfo, ErrorResponse, MediaInfo, TagInfo},
+    common::{ArtistInfo, ErrorResponse, TagInfo},
     lyrics::{LyricsResponse, UpdateLyricsRequest},
     pagination::{PagedResponse, defaults as pagination_defaults},
     performances::{
-        CreatePerformanceRequest, PerformanceResponse, PerformanceSummary,
-        PerformanceTagAssignment, UpdatePerformanceRequest,
+        AudioInfo, AudioKind, CreatePerformanceRequest, PerformanceResponse, PerformanceSummary,
+        PerformanceTagAssignment, UpdatePerformanceRequest, VideoInfo, VideoKind,
     },
     songs::{SongRef, SongSummary},
     tags::PerformanceTagKind,
@@ -65,8 +65,12 @@ use crate::{
         SongSummary,
         ArtistInfo,
         TagInfo,
-        MediaInfo,
-        FileUpload,
+        AudioInfo,
+        AudioKind,
+        VideoInfo,
+        VideoKind,
+        AudioUpload,
+        VideoUpload,
         LyricsResponse,
         UpdateLyricsRequest,
         ErrorResponse,
@@ -178,12 +182,24 @@ pub(crate) async fn build_performance_summaries(
     Ok(items)
 }
 
-/// Placeholder schema for multipart file upload bodies.
+/// Placeholder schema for audio multipart upload bodies.
 #[derive(utoipa::ToSchema)]
 #[allow(dead_code)]
-pub(crate) struct FileUpload {
+pub(crate) struct AudioUpload {
     #[schema(value_type = String, format = Binary)]
     pub file: Vec<u8>,
+    /// Semantic role. See [`AudioKind`].
+    pub kind: String,
+}
+
+/// Placeholder schema for video multipart upload bodies.
+#[derive(utoipa::ToSchema)]
+#[allow(dead_code)]
+pub(crate) struct VideoUpload {
+    #[schema(value_type = String, format = Binary)]
+    pub file: Vec<u8>,
+    /// Semantic role. See [`VideoKind`].
+    pub kind: String,
 }
 
 pub fn router() -> Router<AppState> {
@@ -255,17 +271,19 @@ async fn hydrate(
 
     let audio = audio
         .into_iter()
-        .map(|a| MediaInfo {
+        .map(|a| AudioInfo {
             id: a.id,
             public_url: a.public_url,
+            kind: a.kind,
         })
         .collect();
 
     let video = video
         .into_iter()
-        .map(|v| MediaInfo {
+        .map(|v| VideoInfo {
             id: v.id,
             public_url: v.public_url,
+            kind: v.kind,
         })
         .collect();
 
@@ -293,32 +311,57 @@ fn tag_pairs(assignments: &[PerformanceTagAssignment]) -> Vec<(Uuid, &str)> {
         .collect()
 }
 
-/// Reads the `file` field from a multipart body and returns its bytes, content type, and filename.
-async fn read_file_field(
-    multipart: &mut Multipart,
-) -> Result<(Vec<u8>, String, Option<String>), ApiError> {
+struct MediaFields {
+    data: Vec<u8>,
+    content_type: String,
+    filename: Option<String>,
+    kind: String,
+}
+
+async fn read_media_fields(multipart: &mut Multipart) -> Result<MediaFields, ApiError> {
+    let mut data: Option<Vec<u8>> = None;
+    let mut content_type = String::new();
+    let mut filename: Option<String> = None;
+    let mut kind: Option<String> = None;
+
     while let Some(field) = multipart.next_field().await.map_err(|e| {
         error!("multipart field error: {e:?}");
         ApiError::BadRequest(e.to_string())
     })? {
-        if field.name() == Some("file") {
-            let content_type = field
-                .content_type()
-                .unwrap_or("application/octet-stream")
-                .to_string();
-            let filename = field.file_name().map(str::to_string);
-            let data = field
-                .bytes()
-                .await
-                .map_err(|e| {
-                    error!("multipart read error: {e:?}");
+        match field.name() {
+            Some("file") => {
+                content_type = field
+                    .content_type()
+                    .unwrap_or("application/octet-stream")
+                    .to_string();
+                filename = field.file_name().map(str::to_string);
+                data = Some(
+                    field
+                        .bytes()
+                        .await
+                        .map_err(|e| {
+                            error!("multipart read error: {e:?}");
+                            ApiError::BadRequest(e.to_string())
+                        })?
+                        .to_vec(),
+                );
+            }
+            Some("kind") => {
+                kind = Some(field.text().await.map_err(|e| {
+                    error!("multipart field error: {e:?}");
                     ApiError::BadRequest(e.to_string())
-                })?
-                .to_vec();
-            return Ok((data, content_type, filename));
+                })?);
+            }
+            _ => {}
         }
     }
-    Err(ApiError::BadRequest("missing 'file' field".into()))
+
+    Ok(MediaFields {
+        data: data.ok_or_else(|| ApiError::BadRequest("missing 'file' field".into()))?,
+        content_type,
+        filename,
+        kind: kind.ok_or_else(|| ApiError::BadRequest("missing 'kind' field".into()))?,
+    })
 }
 
 #[utoipa::path(
@@ -520,9 +563,9 @@ pub(crate) async fn delete_performance(
     post,
     path = "/api/performances/{id}/audio",
     params(("id" = Uuid, Path, description = "Performance ID")),
-    request_body(content = FileUpload, content_type = "multipart/form-data"),
+    request_body(content = AudioUpload, content_type = "multipart/form-data"),
     responses(
-        (status = 201, description = "Audio uploaded", body = MediaInfo),
+        (status = 201, description = "Audio uploaded", body = AudioInfo),
         (status = 400, description = "Bad request", body = ErrorResponse),
         (status = 401, description = "Unauthorized", body = ErrorResponse),
         (status = 403, description = "Forbidden", body = ErrorResponse),
@@ -536,7 +579,7 @@ pub(crate) async fn upload_audio(
     auth: AuthUser,
     Path(id): Path<Uuid>,
     mut multipart: Multipart,
-) -> Result<(StatusCode, Json<MediaInfo>), ApiError> {
+) -> Result<(StatusCode, Json<AudioInfo>), ApiError> {
     if !auth
         .capabilities
         .contains(capabilities::PERFORMANCES_MANAGE_ANY)
@@ -547,26 +590,44 @@ pub(crate) async fn upload_audio(
         .await?
         .ok_or(ApiError::NotFound)?;
 
-    let (data, content_type, filename) = read_file_field(&mut multipart).await?;
-    let ext = media::resolve_ext(media::MediaKind::Audio, &content_type, filename.as_deref())?;
-    let saved = state.store.save("audio", ext, &data).await?;
+    let fields = read_media_fields(&mut multipart).await?;
+    let kind = match fields.kind.trim() {
+        "primary" => AudioKind::Primary.as_str(),
+        "misc" => AudioKind::Misc.as_str(),
+        other => {
+            return Err(ApiError::BadRequest(format!(
+                "invalid audio kind '{other}'"
+            )));
+        }
+    };
+    let ext = media::resolve_ext(
+        media::MediaKind::Audio,
+        &fields.content_type,
+        fields.filename.as_deref(),
+    )?;
+    let saved = state.store.save("audio", ext, &fields.data).await?;
 
     let mut conn = state.pool.acquire().await.map_err(DbError::Sqlx)?;
+    if kind == AudioKind::Primary.as_str() {
+        queries::performance_audios::unset_primary(&mut *conn, id).await?;
+    }
     let audio = queries::performance_audios::create(
         &mut conn,
         &NewPerformanceAudio {
             performance_id: id,
             public_url: saved.public_url,
             internal_path: Some(saved.internal_path),
+            kind: kind.to_string(),
         },
     )
     .await?;
 
     Ok((
         StatusCode::CREATED,
-        Json(MediaInfo {
+        Json(AudioInfo {
             id: audio.id,
             public_url: audio.public_url,
+            kind: audio.kind,
         }),
     ))
 }
@@ -617,9 +678,9 @@ pub(crate) async fn delete_audio(
     post,
     path = "/api/performances/{id}/video",
     params(("id" = Uuid, Path, description = "Performance ID")),
-    request_body(content = FileUpload, content_type = "multipart/form-data"),
+    request_body(content = VideoUpload, content_type = "multipart/form-data"),
     responses(
-        (status = 201, description = "Video uploaded", body = MediaInfo),
+        (status = 201, description = "Video uploaded", body = VideoInfo),
         (status = 400, description = "Bad request", body = ErrorResponse),
         (status = 401, description = "Unauthorized", body = ErrorResponse),
         (status = 403, description = "Forbidden", body = ErrorResponse),
@@ -633,7 +694,7 @@ pub(crate) async fn upload_video(
     auth: AuthUser,
     Path(id): Path<Uuid>,
     mut multipart: Multipart,
-) -> Result<(StatusCode, Json<MediaInfo>), ApiError> {
+) -> Result<(StatusCode, Json<VideoInfo>), ApiError> {
     if !auth
         .capabilities
         .contains(capabilities::PERFORMANCES_MANAGE_ANY)
@@ -644,9 +705,23 @@ pub(crate) async fn upload_video(
         .await?
         .ok_or(ApiError::NotFound)?;
 
-    let (data, content_type, filename) = read_file_field(&mut multipart).await?;
-    let ext = media::resolve_ext(media::MediaKind::Video, &content_type, filename.as_deref())?;
-    let saved = state.store.save("video", ext, &data).await?;
+    let fields = read_media_fields(&mut multipart).await?;
+    let kind = match fields.kind.trim() {
+        "clip" => VideoKind::Clip.as_str(),
+        "vod" => VideoKind::Vod.as_str(),
+        "misc" => VideoKind::Misc.as_str(),
+        other => {
+            return Err(ApiError::BadRequest(format!(
+                "invalid video kind '{other}'"
+            )));
+        }
+    };
+    let ext = media::resolve_ext(
+        media::MediaKind::Video,
+        &fields.content_type,
+        fields.filename.as_deref(),
+    )?;
+    let saved = state.store.save("video", ext, &fields.data).await?;
 
     let mut conn = state.pool.acquire().await.map_err(DbError::Sqlx)?;
     let video = queries::performance_videos::create(
@@ -655,15 +730,17 @@ pub(crate) async fn upload_video(
             performance_id: id,
             public_url: saved.public_url,
             internal_path: Some(saved.internal_path),
+            kind: kind.to_string(),
         },
     )
     .await?;
 
     Ok((
         StatusCode::CREATED,
-        Json(MediaInfo {
+        Json(VideoInfo {
             id: video.id,
             public_url: video.public_url,
+            kind: video.kind,
         }),
     ))
 }

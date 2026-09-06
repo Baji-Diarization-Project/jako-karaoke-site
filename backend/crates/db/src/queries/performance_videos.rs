@@ -14,7 +14,7 @@ pub async fn get_by_id(
     id: Uuid,
 ) -> Result<Option<PerformanceVideo>> {
     sqlx::query_as::<_, PerformanceVideo>(
-        "SELECT id, performance_id, public_url, internal_path \
+        "SELECT id, performance_id, public_url, internal_path, kind \
          FROM performance_videos WHERE id = ?",
     )
     .bind(id)
@@ -29,7 +29,7 @@ pub async fn list_for_performance(
     performance_id: Uuid,
 ) -> Result<Vec<PerformanceVideo>> {
     sqlx::query_as::<_, PerformanceVideo>(
-        "SELECT id, performance_id, public_url, internal_path \
+        "SELECT id, performance_id, public_url, internal_path, kind \
          FROM performance_videos WHERE performance_id = ?",
     )
     .bind(performance_id)
@@ -44,13 +44,14 @@ pub async fn create(
     new: &NewPerformanceVideo,
 ) -> Result<PerformanceVideo> {
     sqlx::query_as::<_, PerformanceVideo>(
-        "INSERT INTO performance_videos (performance_id, public_url, internal_path) \
-         VALUES (?, ?, ?) \
-         RETURNING id, performance_id, public_url, internal_path",
+        "INSERT INTO performance_videos (performance_id, public_url, internal_path, kind) \
+         VALUES (?, ?, ?, ?) \
+         RETURNING id, performance_id, public_url, internal_path, kind",
     )
     .bind(new.performance_id)
     .bind(&new.public_url)
     .bind(&new.internal_path)
+    .bind(&new.kind)
     .fetch_one(conn)
     .await
     .map_err(DbError::from)

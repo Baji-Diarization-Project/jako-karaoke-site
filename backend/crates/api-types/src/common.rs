@@ -21,14 +21,6 @@ pub struct TagInfo {
     pub kind: String,
 }
 
-/// A media file (audio or video) embedded in performance responses.
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct MediaInfo {
-    pub id: Uuid,
-    /// Publicly served URL for clients.
-    pub public_url: String,
-}
-
 /// Body returned for all error responses.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ErrorResponse {

@@ -817,7 +817,7 @@
           "content": {
             "multipart/form-data": {
               "schema": {
-                "$ref": "#/components/schemas/FileUpload"
+                "$ref": "#/components/schemas/AudioUpload"
               }
             }
           },
@@ -829,7 +829,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MediaInfo"
+                  "$ref": "#/components/schemas/AudioInfo"
                 }
               }
             }
@@ -1142,7 +1142,7 @@
           "content": {
             "multipart/form-data": {
               "schema": {
-                "$ref": "#/components/schemas/FileUpload"
+                "$ref": "#/components/schemas/VideoUpload"
               }
             }
           },
@@ -1154,7 +1154,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MediaInfo"
+                  "$ref": "#/components/schemas/VideoInfo"
                 }
               }
             }
@@ -3250,6 +3250,54 @@
           }
         }
       },
+      "AudioInfo": {
+        "type": "object",
+        "description": "An audio file attached to a performance with its semantic role.",
+        "required": [
+          "id",
+          "public_url",
+          "kind"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "public_url": {
+            "type": "string",
+            "description": "Publicly served URL for clients."
+          }
+        }
+      },
+      "AudioKind": {
+        "type": "string",
+        "description": "Valid kind values for an audio file attached to a performance.",
+        "enum": [
+          "primary",
+          "misc"
+        ]
+      },
+      "AudioUpload": {
+        "type": "object",
+        "description": "Placeholder schema for audio multipart upload bodies.",
+        "required": [
+          "file",
+          "kind"
+        ],
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary"
+          },
+          "kind": {
+            "type": "string",
+            "description": "Semantic role. See [`AudioKind`]."
+          }
+        }
+      },
       "ClaimRequest": {
         "type": "object",
         "description": "Request body for `POST /auth/claim`.\n\nCompletes a new OAuth signup by finalizing the username. Requires an active\n`oauth_pending` cookie set during the OAuth callback.",
@@ -3453,19 +3501,6 @@
           }
         }
       },
-      "FileUpload": {
-        "type": "object",
-        "description": "Placeholder schema for multipart file upload bodies.",
-        "required": [
-          "file"
-        ],
-        "properties": {
-          "file": {
-            "type": "string",
-            "format": "binary"
-          }
-        }
-      },
       "GrantCapabilityRequest": {
         "type": "object",
         "description": "Request body for `POST /api/admin/users/{id}/capabilities`.",
@@ -3536,24 +3571,6 @@
           },
           "username": {
             "type": "string"
-          }
-        }
-      },
-      "MediaInfo": {
-        "type": "object",
-        "description": "A media file (audio or video) embedded in performance responses.",
-        "required": [
-          "id",
-          "public_url"
-        ],
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "public_url": {
-            "type": "string",
-            "description": "Publicly served URL for clients."
           }
         }
       },
@@ -3795,7 +3812,7 @@
           "audio": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/MediaInfo"
+              "$ref": "#/components/schemas/AudioInfo"
             }
           },
           "duration": {
@@ -3867,7 +3884,7 @@
           "video": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/MediaInfo"
+              "$ref": "#/components/schemas/VideoInfo"
             }
           }
         }
@@ -4403,6 +4420,55 @@
           },
           "username": {
             "type": "string"
+          }
+        }
+      },
+      "VideoInfo": {
+        "type": "object",
+        "description": "A video file attached to a performance with its semantic role.",
+        "required": [
+          "id",
+          "public_url",
+          "kind"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "public_url": {
+            "type": "string",
+            "description": "Publicly served URL for clients."
+          }
+        }
+      },
+      "VideoKind": {
+        "type": "string",
+        "description": "Valid kind values for a video file attached to a performance.",
+        "enum": [
+          "clip",
+          "vod",
+          "misc"
+        ]
+      },
+      "VideoUpload": {
+        "type": "object",
+        "description": "Placeholder schema for video multipart upload bodies.",
+        "required": [
+          "file",
+          "kind"
+        ],
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary"
+          },
+          "kind": {
+            "type": "string",
+            "description": "Semantic role. See [`VideoKind`]."
           }
         }
       }

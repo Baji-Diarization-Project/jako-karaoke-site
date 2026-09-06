@@ -14,7 +14,7 @@ pub async fn get_by_id(
     id: Uuid,
 ) -> Result<Option<PerformanceAudio>> {
     sqlx::query_as::<_, PerformanceAudio>(
-        "SELECT id, performance_id, public_url, internal_path \
+        "SELECT id, performance_id, public_url, internal_path, kind \
          FROM performance_audios WHERE id = ?",
     )
     .bind(id)
@@ -29,7 +29,7 @@ pub async fn list_for_performance(
     performance_id: Uuid,
 ) -> Result<Vec<PerformanceAudio>> {
     sqlx::query_as::<_, PerformanceAudio>(
-        "SELECT id, performance_id, public_url, internal_path \
+        "SELECT id, performance_id, public_url, internal_path, kind \
          FROM performance_audios WHERE performance_id = ?",
     )
     .bind(performance_id)
@@ -44,15 +44,32 @@ pub async fn create(
     new: &NewPerformanceAudio,
 ) -> Result<PerformanceAudio> {
     sqlx::query_as::<_, PerformanceAudio>(
-        "INSERT INTO performance_audios (performance_id, public_url, internal_path) \
-         VALUES (?, ?, ?) \
-         RETURNING id, performance_id, public_url, internal_path",
+        "INSERT INTO performance_audios (performance_id, public_url, internal_path, kind) \
+         VALUES (?, ?, ?, ?) \
+         RETURNING id, performance_id, public_url, internal_path, kind",
     )
     .bind(new.performance_id)
     .bind(&new.public_url)
     .bind(&new.internal_path)
+    .bind(&new.kind)
     .fetch_one(conn)
     .await
+    .map_err(DbError::from)
+}
+
+/// Demotes any existing `"primary"` audio for the given performance to `"misc"`.
+pub async fn unset_primary(
+    executor: impl Executor<'_, Database = MySql>,
+    performance_id: Uuid,
+) -> Result<()> {
+    sqlx::query(
+        "UPDATE performance_audios SET kind = 'misc' \
+         WHERE performance_id = ? AND kind = 'primary'",
+    )
+    .bind(performance_id)
+    .execute(executor)
+    .await
+    .map(|_| ())
     .map_err(DbError::from)
 }
 
