@@ -6,14 +6,15 @@ use axum::{
     Json, Router,
     extract::{DefaultBodyLimit, Path, Query, State},
     http::StatusCode,
-    routing::{delete, get, post},
+    routing::{get, patch, post},
 };
 use uuid::Uuid;
 
 use api_types::{
     artists::{
         ArtistImageInfo, ArtistImageKind, ArtistLinkInfo, ArtistLinkInput, ArtistLinkKind,
-        ArtistResponse, ArtistSummary, CreateArtistRequest, UpdateArtistRequest,
+        ArtistResponse, ArtistSummary, CreateArtistRequest, UpdateArtistImageRequest,
+        UpdateArtistRequest,
     },
     common::ErrorResponse,
     pagination::{PagedResponse, SearchPaginationParams},
@@ -38,6 +39,7 @@ use crate::{
         update_artist,
         delete_artist,
         images::upload_artist_image,
+        images::update_artist_image_kind,
         images::delete_artist_image,
     ),
     components(schemas(
@@ -45,6 +47,7 @@ use crate::{
         ArtistResponse,
         ArtistImageInfo,
         ArtistImageKind,
+        UpdateArtistImageRequest,
         ArtistLinkInfo,
         ArtistLinkInput,
         ArtistLinkKind,
@@ -70,7 +73,7 @@ pub fn router() -> Router<AppState> {
         )
         .route(
             "/{id}/images/{image_id}",
-            delete(images::delete_artist_image),
+            patch(images::update_artist_image_kind).delete(images::delete_artist_image),
         )
 }
 

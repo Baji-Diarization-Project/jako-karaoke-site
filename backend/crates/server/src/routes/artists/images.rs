@@ -9,7 +9,10 @@ use sha2::{Digest, Sha256};
 use tracing::error;
 use uuid::Uuid;
 
-use api_types::{artists::ArtistImageInfo, common::ErrorResponse};
+use api_types::{
+    artists::{ArtistImageInfo, UpdateArtistImageRequest},
+    common::ErrorResponse,
+};
 use db::{error::DbError, models::NewImage, queries};
 
 use crate::{auth::middleware::AuthUser, capabilities, error::ApiError, media, state::AppState};
@@ -159,6 +162,57 @@ pub(crate) async fn upload_artist_image(
             kind: kind.to_string(),
         }),
     ))
+}
+
+#[utoipa::path(
+    patch,
+    path = "/api/artists/{id}/images/{image_id}",
+    params(
+        ("id" = Uuid, Path, description = "Artist ID"),
+        ("image_id" = Uuid, Path, description = "Image ID"),
+    ),
+    request_body = UpdateArtistImageRequest,
+    responses(
+        (status = 200, description = "Kind updated", body = ArtistImageInfo),
+        (status = 400, description = "Bad request", body = ErrorResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+        (status = 404, description = "Not found", body = ErrorResponse),
+    ),
+    tag = "artists",
+    security(("session" = []))
+)]
+pub(crate) async fn update_artist_image_kind(
+    State(state): State<AppState>,
+    auth: AuthUser,
+    Path((id, image_id)): Path<(Uuid, Uuid)>,
+    Json(body): Json<UpdateArtistImageRequest>,
+) -> Result<Json<ArtistImageInfo>, ApiError> {
+    if !auth.capabilities.contains(capabilities::ARTISTS_MANAGE_ANY) {
+        return Err(ApiError::Forbidden);
+    }
+
+    let kind = match body.kind.trim() {
+        "avatar" => "avatar",
+        other => return Err(ApiError::BadRequest(format!("invalid kind '{other}'"))),
+    };
+
+    let mut conn = state.pool.acquire().await.map_err(DbError::Sqlx)?;
+    let updated = queries::artists::update_image_kind(&mut conn, id, image_id, kind).await?;
+    if !updated {
+        return Err(ApiError::NotFound);
+    }
+
+    let image = queries::images::get_by_id(&state.pool, image_id)
+        .await?
+        .ok_or(ApiError::NotFound)?;
+
+    Ok(Json(ArtistImageInfo {
+        id: image.id,
+        public_url: image.public_url,
+        credits: image.credits,
+        kind: kind.to_string(),
+    }))
 }
 
 #[utoipa::path(

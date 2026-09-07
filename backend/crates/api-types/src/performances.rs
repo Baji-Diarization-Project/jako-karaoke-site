@@ -70,6 +70,18 @@ pub struct VideoInfo {
     pub kind: String,
 }
 
+/// Request body for `PATCH /api/performances/{id}/audio/{audio_id}`.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct UpdateAudioKindRequest {
+    pub kind: String,
+}
+
+/// Request body for `PATCH /api/performances/{id}/video/{video_id}`.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct UpdateVideoKindRequest {
+    pub kind: String,
+}
+
 /// A tag paired with its kind for application to a performance.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct PerformanceTagAssignment {

@@ -57,6 +57,17 @@ pub async fn create(
     .map_err(DbError::from)
 }
 
+/// Updates the kind of a performance video record. Returns `true` if a row was updated.
+pub async fn update_kind(conn: &mut MySqlConnection, id: Uuid, kind: &str) -> Result<bool> {
+    sqlx::query("UPDATE performance_videos SET kind = ? WHERE id = ?")
+        .bind(kind)
+        .bind(id)
+        .execute(conn)
+        .await
+        .map(|r| r.rows_affected() > 0)
+        .map_err(DbError::from)
+}
+
 /// Deletes a performance video record by ID. Returns `true` if a row was deleted.
 pub async fn delete(executor: impl Executor<'_, Database = MySql>, id: Uuid) -> Result<bool> {
     sqlx::query("DELETE FROM performance_videos WHERE id = ?")

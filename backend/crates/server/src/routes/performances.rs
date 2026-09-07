@@ -6,7 +6,7 @@ use axum::{
     Json, Router,
     extract::{DefaultBodyLimit, Multipart, Path, Query, State},
     http::StatusCode,
-    routing::{delete, get, post},
+    routing::{get, patch, post},
 };
 use tracing::error;
 use uuid::Uuid;
@@ -17,7 +17,8 @@ use api_types::{
     pagination::{PagedResponse, defaults as pagination_defaults},
     performances::{
         AudioInfo, AudioKind, CreatePerformanceRequest, PerformanceResponse, PerformanceSummary,
-        PerformanceTagAssignment, UpdatePerformanceRequest, VideoInfo, VideoKind,
+        PerformanceTagAssignment, UpdateAudioKindRequest, UpdatePerformanceRequest,
+        UpdateVideoKindRequest, VideoInfo, VideoKind,
     },
     songs::{SongRef, SongSummary},
     tags::PerformanceTagKind,
@@ -45,8 +46,10 @@ use crate::{
         update_performance,
         delete_performance,
         upload_audio,
+        update_audio_kind,
         delete_audio,
         upload_video,
+        update_video_kind,
         delete_video,
         lyrics::get_performance_lyrics,
         lyrics::put_performance_lyrics,
@@ -71,6 +74,8 @@ use crate::{
         VideoKind,
         AudioUpload,
         VideoUpload,
+        UpdateAudioKindRequest,
+        UpdateVideoKindRequest,
         LyricsResponse,
         UpdateLyricsRequest,
         ErrorResponse,
@@ -215,12 +220,18 @@ pub fn router() -> Router<AppState> {
             "/{id}/audio",
             post(upload_audio).layer(DefaultBodyLimit::max(500 * 1024 * 1024)),
         )
-        .route("/{id}/audio/{audio_id}", delete(delete_audio))
+        .route(
+            "/{id}/audio/{audio_id}",
+            patch(update_audio_kind).delete(delete_audio),
+        )
         .route(
             "/{id}/video",
             post(upload_video).layer(DefaultBodyLimit::max(500 * 1024 * 1024)),
         )
-        .route("/{id}/video/{video_id}", delete(delete_video))
+        .route(
+            "/{id}/video/{video_id}",
+            patch(update_video_kind).delete(delete_video),
+        )
         .route(
             "/{id}/lyrics",
             get(lyrics::get_performance_lyrics)
@@ -633,6 +644,67 @@ pub(crate) async fn upload_audio(
 }
 
 #[utoipa::path(
+    patch,
+    path = "/api/performances/{id}/audio/{audio_id}",
+    params(
+        ("id" = Uuid, Path, description = "Performance ID"),
+        ("audio_id" = Uuid, Path, description = "Audio record ID"),
+    ),
+    request_body = UpdateAudioKindRequest,
+    responses(
+        (status = 200, description = "Kind updated", body = AudioInfo),
+        (status = 400, description = "Bad request", body = ErrorResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+        (status = 404, description = "Not found", body = ErrorResponse),
+    ),
+    tag = "performances",
+    security(("session" = []))
+)]
+pub(crate) async fn update_audio_kind(
+    State(state): State<AppState>,
+    auth: AuthUser,
+    Path((id, audio_id)): Path<(Uuid, Uuid)>,
+    Json(body): Json<UpdateAudioKindRequest>,
+) -> Result<Json<AudioInfo>, ApiError> {
+    if !auth
+        .capabilities
+        .contains(capabilities::PERFORMANCES_MANAGE_ANY)
+    {
+        return Err(ApiError::Forbidden);
+    }
+
+    let kind = match body.kind.trim() {
+        "primary" => AudioKind::Primary.as_str(),
+        "misc" => AudioKind::Misc.as_str(),
+        other => {
+            return Err(ApiError::BadRequest(format!(
+                "invalid audio kind '{other}'"
+            )));
+        }
+    };
+
+    let audio = queries::performance_audios::get_by_id(&state.pool, audio_id)
+        .await?
+        .ok_or(ApiError::NotFound)?;
+    if audio.performance_id != id {
+        return Err(ApiError::NotFound);
+    }
+
+    let mut conn = state.pool.acquire().await.map_err(DbError::Sqlx)?;
+    if kind == AudioKind::Primary.as_str() {
+        queries::performance_audios::unset_primary(&mut *conn, id).await?;
+    }
+    queries::performance_audios::update_kind(&mut conn, audio_id, kind).await?;
+
+    Ok(Json(AudioInfo {
+        id: audio.id,
+        public_url: audio.public_url,
+        kind: kind.to_string(),
+    }))
+}
+
+#[utoipa::path(
     delete,
     path = "/api/performances/{id}/audio/{audio_id}",
     params(
@@ -743,6 +815,65 @@ pub(crate) async fn upload_video(
             kind: video.kind,
         }),
     ))
+}
+
+#[utoipa::path(
+    patch,
+    path = "/api/performances/{id}/video/{video_id}",
+    params(
+        ("id" = Uuid, Path, description = "Performance ID"),
+        ("video_id" = Uuid, Path, description = "Video record ID"),
+    ),
+    request_body = UpdateVideoKindRequest,
+    responses(
+        (status = 200, description = "Kind updated", body = VideoInfo),
+        (status = 400, description = "Bad request", body = ErrorResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+        (status = 404, description = "Not found", body = ErrorResponse),
+    ),
+    tag = "performances",
+    security(("session" = []))
+)]
+pub(crate) async fn update_video_kind(
+    State(state): State<AppState>,
+    auth: AuthUser,
+    Path((id, video_id)): Path<(Uuid, Uuid)>,
+    Json(body): Json<UpdateVideoKindRequest>,
+) -> Result<Json<VideoInfo>, ApiError> {
+    if !auth
+        .capabilities
+        .contains(capabilities::PERFORMANCES_MANAGE_ANY)
+    {
+        return Err(ApiError::Forbidden);
+    }
+
+    let kind = match body.kind.trim() {
+        "clip" => VideoKind::Clip.as_str(),
+        "vod" => VideoKind::Vod.as_str(),
+        "misc" => VideoKind::Misc.as_str(),
+        other => {
+            return Err(ApiError::BadRequest(format!(
+                "invalid video kind '{other}'"
+            )));
+        }
+    };
+
+    let video = queries::performance_videos::get_by_id(&state.pool, video_id)
+        .await?
+        .ok_or(ApiError::NotFound)?;
+    if video.performance_id != id {
+        return Err(ApiError::NotFound);
+    }
+
+    let mut conn = state.pool.acquire().await.map_err(DbError::Sqlx)?;
+    queries::performance_videos::update_kind(&mut conn, video_id, kind).await?;
+
+    Ok(Json(VideoInfo {
+        id: video.id,
+        public_url: video.public_url,
+        kind: kind.to_string(),
+    }))
 }
 
 #[utoipa::path(

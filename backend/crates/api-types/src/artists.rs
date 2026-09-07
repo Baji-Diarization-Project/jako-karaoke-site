@@ -58,6 +58,12 @@ pub struct ArtistImageInfo {
     pub kind: String,
 }
 
+/// Request body for `PATCH /api/artists/{id}/images/{image_id}`.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct UpdateArtistImageRequest {
+    pub kind: String,
+}
+
 /// Input for attaching an existing image to an artist.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ArtistImageInput {

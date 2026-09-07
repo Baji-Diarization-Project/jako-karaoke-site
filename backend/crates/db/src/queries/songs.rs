@@ -381,6 +381,23 @@ pub async fn unlink_image(
         .map_err(DbError::from)
 }
 
+/// Updates the kind of a `song_images` join row. Returns `true` if a row was updated.
+pub async fn update_image_kind(
+    conn: &mut MySqlConnection,
+    song_id: Uuid,
+    image_id: Uuid,
+    kind: &str,
+) -> Result<bool> {
+    sqlx::query("UPDATE song_images SET kind = ? WHERE song_id = ? AND image_id = ?")
+        .bind(kind)
+        .bind(song_id)
+        .bind(image_id)
+        .execute(conn)
+        .await
+        .map(|r| r.rows_affected() > 0)
+        .map_err(DbError::from)
+}
+
 /// Replaces the full set of images for a song.
 ///
 /// Must be called within a caller provided transaction for atomicity.
