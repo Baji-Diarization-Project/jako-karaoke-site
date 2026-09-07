@@ -1,6 +1,6 @@
-import { TrashIcon, XIcon } from "@phosphor-icons/react";
+import { XIcon } from "@phosphor-icons/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useState } from "react";
 
 import {
   ARTIST_IMAGE_KINDS,
@@ -13,6 +13,8 @@ import {
 } from "@/api/artists";
 import { artistKeys, useArtist } from "@/hooks/api/artists";
 import { applyAll } from "@/lib/staging";
+
+import { ImageEditSection } from "./image-edit-section";
 
 type LinkDraft = { url: string; kind: ArtistLinkKind; label: string };
 
@@ -48,8 +50,6 @@ export function ArtistDetailPanel({
   >(new Map());
   const [formError, setFormError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-
-  const imageInputRef = useRef<HTMLInputElement>(null);
 
   const queryClient = useQueryClient();
 
@@ -278,80 +278,25 @@ export function ArtistDetailPanel({
               </button>
             </div>
           </div>
-          <div className="form-field">
-            <div className="admin-link-card-header">
-              <span className="form-label">Images</span>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => {
-                  imageInputRef.current?.click();
-                }}
-              >
-                Add image
-              </button>
-            </div>
-            <input
-              ref={imageInputRef}
-              type="file"
-              accept="image/*"
-              className="sr-only"
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (file) setStagingAddImages((prev) => [...prev, file]);
-                event.target.value = "";
-              }}
-            />
-            {existingImages.filter((img) => !pendingRemoveIds.has(img.id)).length > 0 && (
-              <div className="admin-image-list">
-                {existingImages
-                  .filter((img) => !pendingRemoveIds.has(img.id))
-                  .map((img) => (
-                    <div key={img.id} className="admin-image-item">
-                      <img src={img.public_url} alt={img.kind} />
-                      <select
-                        className="admin-kind-select"
-                        value={pendingImageKindChanges.get(img.id) ?? img.kind}
-                        onChange={(event) => {
-                          const newKind = ARTIST_IMAGE_KINDS.find((k) => k === event.target.value);
-                          if (!newKind) return;
-                          setPendingImageKindChanges((prev) => new Map(prev).set(img.id, newKind));
-                        }}
-                      >
-                        {ARTIST_IMAGE_KINDS.map((k) => (
-                          <option key={k} value={k}>
-                            {k}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        type="button"
-                        className="admin-image-delete"
-                        onClick={() => {
-                          setPendingRemoveIds((prev) => new Set([...prev, img.id]));
-                        }}
-                      >
-                        <TrashIcon weight="bold" />
-                      </button>
-                    </div>
-                  ))}
-              </div>
-            )}
-            {stagingAddImages.map((file, index) => (
-              <div key={index} className="admin-audio-item">
-                <span className="text-sm text-fg-muted">{file.name}</span>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => {
-                    setStagingAddImages((prev) => prev.filter((_, i) => i !== index));
-                  }}
-                >
-                  <TrashIcon weight="bold" />
-                </button>
-              </div>
-            ))}
-          </div>
+          <ImageEditSection
+            existingImages={existingImages}
+            pendingRemoveIds={pendingRemoveIds}
+            pendingKindChanges={pendingImageKindChanges}
+            stagingFiles={stagingAddImages}
+            kinds={ARTIST_IMAGE_KINDS}
+            onFileSelect={(file) => {
+              setStagingAddImages((prev) => [...prev, file]);
+            }}
+            onRemoveExisting={(id) => {
+              setPendingRemoveIds((prev) => new Set([...prev, id]));
+            }}
+            onChangeExistingKind={(id, kind) => {
+              setPendingImageKindChanges((prev) => new Map(prev).set(id, kind));
+            }}
+            onRemoveStaged={(index) => {
+              setStagingAddImages((prev) => prev.filter((_, i) => i !== index));
+            }}
+          />
           {formError !== null && <p className="form-error">{formError}</p>}
         </div>
       </>
