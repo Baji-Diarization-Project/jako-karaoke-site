@@ -1,3 +1,5 @@
+import { XIcon } from "@phosphor-icons/react";
+
 import logoUrl from "@/assets/Baji.factions.Industry.svg";
 import { AuthDialog } from "@/components/auth/auth-dialog";
 import { useAuthStore } from "@/store/auth";
@@ -5,14 +7,25 @@ import { useAuthStore } from "@/store/auth";
 import { NavItem } from "./nav-item";
 import { UserMenu } from "./user-menu";
 
-export function Sidebar() {
+type SidebarProps = {
+  open: boolean;
+  onClose: () => void;
+};
+
+export function Sidebar({ open, onClose }: SidebarProps) {
   const user = useAuthStore((state) => state.user);
 
   return (
-    <aside className="sidebar">
+    <aside
+      className={`sidebar h-full w-full shrink-0 flex-col md:flex md:w-60 ${open ? "flex" : "hidden"}`}
+    >
       <div className="sidebar-header">
         <img src={logoUrl} alt="" aria-hidden className="sidebar-logo" />
         <span className="sidebar-brand">Karaoke Player</span>
+
+        <button type="button" onClick={onClose} className="cursor-pointer md:hidden">
+          <XIcon size={28} />
+        </button>
       </div>
       <nav className="sidebar-nav">
         <NavItem to="/" label="Home" />
