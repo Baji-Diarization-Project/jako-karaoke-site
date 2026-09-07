@@ -27,9 +27,9 @@ export function ConfirmDialog({
       <Dialog.Portal>
         <Dialog.Backdrop className="dialog-backdrop" />
         <Dialog.Popup className="dialog-popup">
-          <Dialog.Title className="admin-dialog-title">{label}</Dialog.Title>
+          <Dialog.Title className="dialog-title">{label}</Dialog.Title>
           {error != null && <p className="form-error">{error}</p>}
-          <div className="admin-dialog-actions">
+          <div className="dialog-actions">
             <button
               type="button"
               className="btn btn-secondary"

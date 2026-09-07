@@ -57,7 +57,7 @@ export function UsernameClaim() {
       <Dialog.Portal>
         <Dialog.Backdrop className="dialog-backdrop" />
         <Dialog.Popup className="dialog-popup">
-          <div className="admin-dialog-form">
+          <div className="dialog-form">
             <Dialog.Title className="text-base font-semibold">Choose a username</Dialog.Title>
             <p className="text-sm text-fg-muted">
               This is how you&apos;ll appear on the site. You can keep your provider handle or pick
@@ -68,7 +68,7 @@ export function UsernameClaim() {
                 event.preventDefault();
                 void handleSubmit();
               }}
-              className="admin-dialog-form"
+              className="dialog-form"
             >
               <div className="form-field">
                 <label className="form-label" htmlFor="claim-username">

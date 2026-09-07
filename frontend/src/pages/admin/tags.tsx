@@ -115,9 +115,9 @@ export function TagsAdminTab() {
         <Dialog.Portal>
           <Dialog.Backdrop className="dialog-backdrop" />
           <Dialog.Popup className="dialog-popup">
-            <Dialog.Title className="admin-dialog-title">New tag</Dialog.Title>
+            <Dialog.Title className="dialog-title">New tag</Dialog.Title>
             <form
-              className="admin-dialog-form"
+              className="dialog-form"
               onSubmit={(event) => {
                 event.preventDefault();
                 createMutation.mutate(newTagName.trim());
@@ -139,7 +139,7 @@ export function TagsAdminTab() {
                 />
               </div>
               {createError !== null && <p className="form-error">{createError}</p>}
-              <div className="admin-dialog-actions">
+              <div className="dialog-actions">
                 <button
                   type="button"
                   className="btn btn-secondary"

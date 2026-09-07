@@ -203,9 +203,9 @@ export function ImportPerformancesDialog({
       <Dialog.Portal>
         <Dialog.Backdrop className="dialog-backdrop" />
         <Dialog.Popup className="dialog-popup">
-          <Dialog.Title className="admin-dialog-title">Import Performances</Dialog.Title>
+          <Dialog.Title className="dialog-title">Import Performances</Dialog.Title>
 
-          <div className="admin-dialog-form">
+          <div className="dialog-form">
             {(state.phase === "idle" ||
               state.phase === "parse_error" ||
               state.phase === "resolve_error") && (
@@ -293,7 +293,7 @@ export function ImportPerformancesDialog({
             )}
           </div>
 
-          <div className="admin-dialog-actions">
+          <div className="dialog-actions">
             {state.phase === "ready" && (
               <>
                 <button type="button" className="btn btn-secondary" onClick={resetToIdle}>
