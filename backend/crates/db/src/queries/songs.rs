@@ -112,6 +112,8 @@ pub async fn search_count(
 }
 
 /// Inserts a new song and returns the created row.
+///
+/// Returns [`DbError::Conflict`] if a song with the same title already exists.
 pub async fn create(conn: &mut MySqlConnection, new: &NewSong) -> Result<Song> {
     sqlx::query_as::<_, Song>(
         "INSERT INTO songs (title, created_by, lyrics_id) VALUES (?, ?, ?) \
@@ -122,10 +124,15 @@ pub async fn create(conn: &mut MySqlConnection, new: &NewSong) -> Result<Song> {
     .bind(new.lyrics_id)
     .fetch_one(conn)
     .await
-    .map_err(DbError::from)
+    .map_err(|e| match e {
+        sqlx::Error::Database(ref db) if db.is_unique_violation() => DbError::Conflict,
+        other => DbError::Sqlx(other),
+    })
 }
 
 /// Updates a song's mutable fields. Returns `None` if the ID does not exist.
+///
+/// Returns [`DbError::Conflict`] if the new title is already taken by another song.
 pub async fn update(
     conn: &mut MySqlConnection,
     id: Uuid,
@@ -136,7 +143,10 @@ pub async fn update(
         .bind(id)
         .execute(&mut *conn)
         .await
-        .map_err(DbError::from)?;
+        .map_err(|e| match e {
+            sqlx::Error::Database(ref db) if db.is_unique_violation() => DbError::Conflict,
+            other => DbError::Sqlx(other),
+        })?;
     get_by_id(&mut *conn, id).await
 }
 
@@ -296,13 +306,23 @@ pub async fn set_tags(
     Ok(())
 }
 
-/// Returns the images for a song via the `song_images` join table.
+/// Returns the images for a song with their kind from the `song_images` join table.
 pub async fn get_images(
     executor: impl Executor<'_, Database = MySql>,
     song_id: Uuid,
-) -> Result<Vec<Image>> {
-    sqlx::query_as::<_, Image>(
-        "SELECT i.id, i.public_url, i.internal_path, i.credits \
+) -> Result<Vec<(Image, String)>> {
+    #[derive(sqlx::FromRow)]
+    struct Row {
+        id: Uuid,
+        hash: String,
+        public_url: String,
+        internal_path: Option<String>,
+        credits: Option<String>,
+        kind: String,
+    }
+
+    sqlx::query_as::<_, Row>(
+        "SELECT i.id, i.hash, i.public_url, i.internal_path, i.credits, si.kind \
          FROM images i \
          JOIN song_images si ON si.image_id = i.id \
          WHERE si.song_id = ?",
@@ -311,6 +331,54 @@ pub async fn get_images(
     .fetch_all(executor)
     .await
     .map_err(DbError::from)
+    .map(|rows| {
+        rows.into_iter()
+            .map(|r| {
+                (
+                    Image {
+                        id: r.id,
+                        hash: r.hash,
+                        public_url: r.public_url,
+                        internal_path: r.internal_path,
+                        credits: r.credits,
+                    },
+                    r.kind,
+                )
+            })
+            .collect()
+    })
+}
+
+/// Inserts a single `song_images` join row.
+pub async fn link_image(
+    conn: &mut MySqlConnection,
+    song_id: Uuid,
+    image_id: Uuid,
+    kind: &str,
+) -> Result<()> {
+    sqlx::query("INSERT IGNORE INTO song_images (song_id, image_id, kind) VALUES (?, ?, ?)")
+        .bind(song_id)
+        .bind(image_id)
+        .bind(kind)
+        .execute(conn)
+        .await
+        .map(|_| ())
+        .map_err(DbError::from)
+}
+
+/// Removes a single `song_images` join row. Returns `true` if a row was deleted.
+pub async fn unlink_image(
+    executor: impl Executor<'_, Database = MySql>,
+    song_id: Uuid,
+    image_id: Uuid,
+) -> Result<bool> {
+    sqlx::query("DELETE FROM song_images WHERE song_id = ? AND image_id = ?")
+        .bind(song_id)
+        .bind(image_id)
+        .execute(executor)
+        .await
+        .map(|r| r.rows_affected() > 0)
+        .map_err(DbError::from)
 }
 
 /// Replaces the full set of images for a song.
@@ -319,17 +387,18 @@ pub async fn get_images(
 pub async fn set_images(
     conn: &mut MySqlConnection,
     song_id: Uuid,
-    image_ids: &[Uuid],
+    images: &[(Uuid, &str)],
 ) -> Result<()> {
     sqlx::query("DELETE FROM song_images WHERE song_id = ?")
         .bind(song_id)
         .execute(&mut *conn)
         .await
         .map_err(DbError::from)?;
-    for &image_id in image_ids {
-        sqlx::query("INSERT INTO song_images (song_id, image_id) VALUES (?, ?)")
+    for &(image_id, kind) in images {
+        sqlx::query("INSERT INTO song_images (song_id, image_id, kind) VALUES (?, ?, ?)")
             .bind(song_id)
             .bind(image_id)
+            .bind(kind)
             .execute(&mut *conn)
             .await
             .map_err(DbError::from)?;

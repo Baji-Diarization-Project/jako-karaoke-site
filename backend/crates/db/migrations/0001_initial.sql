@@ -61,10 +61,12 @@ CREATE TABLE IF NOT EXISTS lyrics (
 -- Can be cover art, thumbnail, etc.
 CREATE TABLE IF NOT EXISTS images (
     id BINARY(16) NOT NULL DEFAULT (UNHEX(REPLACE(UUID_V7(), '-', ''))),
+    hash CHAR(64) NOT NULL,
     public_url VARCHAR(512) NOT NULL,
     internal_path VARCHAR(512) NULL,
     credits TEXT NULL,
-    PRIMARY KEY (id)
+    PRIMARY KEY (id),
+    UNIQUE INDEX (hash)
 ) ENGINE = InnoDB;
 
 -- Playlists
@@ -121,13 +123,15 @@ CREATE TABLE IF NOT EXISTS songs (
     created_by BINARY(16) NULL REFERENCES users (id) ON DELETE SET NULL,
     lyrics_id BINARY(16) NULL REFERENCES lyrics (id) ON DELETE SET NULL,
     PRIMARY KEY (id),
-    INDEX (title)
+    UNIQUE INDEX (title)
 ) ENGINE = InnoDB;
 
 -- Song <-> Image (M2M)
+-- kind denotes the semantic role of the image (e.g. "cover_art").
 CREATE TABLE IF NOT EXISTS song_images (
     song_id BINARY(16) NOT NULL REFERENCES songs (id) ON DELETE CASCADE,
     image_id BINARY(16) NOT NULL REFERENCES images (id) ON DELETE CASCADE,
+    kind VARCHAR(32) NOT NULL,
     PRIMARY KEY (song_id, image_id)
 ) ENGINE = InnoDB;
 

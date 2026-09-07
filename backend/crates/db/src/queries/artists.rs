@@ -137,6 +137,7 @@ pub async fn get_images(
     #[derive(sqlx::FromRow)]
     struct Row {
         id: Uuid,
+        hash: String,
         public_url: String,
         internal_path: Option<String>,
         credits: Option<String>,
@@ -144,7 +145,7 @@ pub async fn get_images(
     }
 
     sqlx::query_as::<_, Row>(
-        "SELECT i.id, i.public_url, i.internal_path, i.credits, aimg.kind \
+        "SELECT i.id, i.hash, i.public_url, i.internal_path, i.credits, aimg.kind \
          FROM images i \
          JOIN artist_images aimg ON aimg.image_id = i.id \
          WHERE aimg.artist_id = ?",
@@ -159,6 +160,7 @@ pub async fn get_images(
                 (
                     Image {
                         id: r.id,
+                        hash: r.hash,
                         public_url: r.public_url,
                         internal_path: r.internal_path,
                         credits: r.credits,
@@ -185,6 +187,7 @@ pub async fn get_images_batch(
     struct Row {
         artist_id: Uuid,
         id: Uuid,
+        hash: String,
         public_url: String,
         internal_path: Option<String>,
         credits: Option<String>,
@@ -192,7 +195,7 @@ pub async fn get_images_batch(
     }
 
     let mut builder = sqlx::QueryBuilder::new(
-        "SELECT aimg.artist_id, i.id, i.public_url, i.internal_path, i.credits, aimg.kind \
+        "SELECT aimg.artist_id, i.id, i.hash, i.public_url, i.internal_path, i.credits, aimg.kind \
          FROM images i \
          JOIN artist_images aimg ON aimg.image_id = i.id \
          WHERE aimg.artist_id IN (",
@@ -214,6 +217,7 @@ pub async fn get_images_batch(
         by_artist.entry(row.artist_id).or_default().push((
             Image {
                 id: row.id,
+                hash: row.hash,
                 public_url: row.public_url,
                 internal_path: row.internal_path,
                 credits: row.credits,
@@ -222,6 +226,38 @@ pub async fn get_images_batch(
         ));
     }
     Ok(by_artist)
+}
+
+/// Inserts a single `artist_images` join row.
+pub async fn link_image(
+    conn: &mut MySqlConnection,
+    artist_id: Uuid,
+    image_id: Uuid,
+    kind: &str,
+) -> Result<()> {
+    sqlx::query("INSERT IGNORE INTO artist_images (artist_id, image_id, kind) VALUES (?, ?, ?)")
+        .bind(artist_id)
+        .bind(image_id)
+        .bind(kind)
+        .execute(conn)
+        .await
+        .map(|_| ())
+        .map_err(DbError::from)
+}
+
+/// Removes a single `artist_images` join row. Returns `true` if a row was deleted.
+pub async fn unlink_image(
+    executor: impl Executor<'_, Database = MySql>,
+    artist_id: Uuid,
+    image_id: Uuid,
+) -> Result<bool> {
+    sqlx::query("DELETE FROM artist_images WHERE artist_id = ? AND image_id = ?")
+        .bind(artist_id)
+        .bind(image_id)
+        .execute(executor)
+        .await
+        .map(|r| r.rows_affected() > 0)
+        .map_err(DbError::from)
 }
 
 /// Replaces the full set of images for an artist.

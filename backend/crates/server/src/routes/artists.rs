@@ -1,17 +1,19 @@
 //! Artist CRUD handlers and the `ArtistsApi` OpenAPI spec struct.
 
+pub(crate) mod images;
+
 use axum::{
     Json, Router,
-    extract::{Path, Query, State},
+    extract::{DefaultBodyLimit, Path, Query, State},
     http::StatusCode,
-    routing::get,
+    routing::{delete, get, post},
 };
 use uuid::Uuid;
 
 use api_types::{
     artists::{
-        ArtistImageInfo, ArtistImageInput, ArtistImageKind, ArtistLinkInfo, ArtistLinkInput,
-        ArtistLinkKind, ArtistResponse, ArtistSummary, CreateArtistRequest, UpdateArtistRequest,
+        ArtistImageInfo, ArtistImageKind, ArtistLinkInfo, ArtistLinkInput, ArtistLinkKind,
+        ArtistResponse, ArtistSummary, CreateArtistRequest, UpdateArtistRequest,
     },
     common::ErrorResponse,
     pagination::{PagedResponse, SearchPaginationParams},
@@ -29,18 +31,26 @@ use crate::{
 
 #[derive(utoipa::OpenApi)]
 #[openapi(
-    paths(list_artists, get_artist, create_artist, update_artist, delete_artist),
+    paths(
+        list_artists,
+        get_artist,
+        create_artist,
+        update_artist,
+        delete_artist,
+        images::upload_artist_image,
+        images::delete_artist_image,
+    ),
     components(schemas(
         ArtistSummary,
         ArtistResponse,
         ArtistImageInfo,
-        ArtistImageInput,
         ArtistImageKind,
         ArtistLinkInfo,
         ArtistLinkInput,
         ArtistLinkKind,
         CreateArtistRequest,
         UpdateArtistRequest,
+        images::ImageUpload,
         ErrorResponse,
         PagedResponse<ArtistSummary>,
     ))
@@ -53,6 +63,14 @@ pub fn router() -> Router<AppState> {
         .route(
             "/{id}",
             get(get_artist).put(update_artist).delete(delete_artist),
+        )
+        .route(
+            "/{id}/images",
+            post(images::upload_artist_image).layer(DefaultBodyLimit::max(50 * 1024 * 1024)),
+        )
+        .route(
+            "/{id}/images/{image_id}",
+            delete(images::delete_artist_image),
         )
 }
 
@@ -89,13 +107,6 @@ async fn hydrate(pool: &MySqlPool, artist: db::models::Artist) -> Result<ArtistR
             .collect(),
         links: links.into_iter().map(link_info).collect(),
     })
-}
-
-fn image_pairs(inputs: &[ArtistImageInput]) -> Vec<(Uuid, &str)> {
-    inputs
-        .iter()
-        .map(|i| (i.image_id, i.kind.as_str()))
-        .collect()
 }
 
 fn new_links(inputs: Vec<ArtistLinkInput>) -> Vec<NewArtistLink> {
@@ -198,7 +209,6 @@ pub(crate) async fn create_artist(
     if !auth.capabilities.contains(capabilities::ARTISTS_MANAGE_ANY) {
         return Err(ApiError::Forbidden);
     }
-    let image_pairs = image_pairs(&req.images);
     let new_links = new_links(req.links);
 
     let mut tx = state.pool.begin().await.map_err(DbError::Sqlx)?;
@@ -210,7 +220,6 @@ pub(crate) async fn create_artist(
         },
     )
     .await?;
-    queries::artists::set_images(&mut tx, artist.id, &image_pairs).await?;
     queries::artists::set_links(&mut tx, artist.id, &new_links).await?;
     tx.commit().await.map_err(DbError::Sqlx)?;
 
@@ -243,7 +252,6 @@ pub(crate) async fn update_artist(
     if !auth.capabilities.contains(capabilities::ARTISTS_MANAGE_ANY) {
         return Err(ApiError::Forbidden);
     }
-    let image_pairs = image_pairs(&req.images);
     let new_links = new_links(req.links);
 
     let mut tx = state.pool.begin().await.map_err(DbError::Sqlx)?;
@@ -257,7 +265,6 @@ pub(crate) async fn update_artist(
     )
     .await?
     .ok_or(ApiError::NotFound)?;
-    queries::artists::set_images(&mut tx, id, &image_pairs).await?;
     queries::artists::set_links(&mut tx, id, &new_links).await?;
     tx.commit().await.map_err(DbError::Sqlx)?;
 

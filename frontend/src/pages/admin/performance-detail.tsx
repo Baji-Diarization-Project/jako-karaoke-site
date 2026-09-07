@@ -1,9 +1,11 @@
+import { TrashIcon } from "@phosphor-icons/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import {
   PERFORMANCE_TAG_KINDS,
   performancesApi,
+  type MediaInfo,
   type PerformanceSummary,
   type PerformanceTagKind,
 } from "@/api/performances";
@@ -13,6 +15,7 @@ import { performanceKeys, usePerformance } from "@/hooks/api/performances";
 import { useSongs } from "@/hooks/api/songs";
 import { tagKeys, useTags } from "@/hooks/api/tags";
 import { formatDate, formatStreamTime, parseStreamTime } from "@/lib/format";
+import { applyAll } from "@/lib/staging";
 
 import { ItemPicker, TagPicker, type TagAssignment } from "./pickers";
 import { resolveTagAssignments } from "./tag-utils";
@@ -36,8 +39,12 @@ export function PerformanceDetailPanel({
   const [editSingerIds, setEditSingerIds] = useState<string[]>([]);
   const [editTags, setEditTags] = useState<TagAssignment<PerformanceTagKind>[]>([]);
   const [editLyrics, setEditLyrics] = useState("");
+  const [stagingAddAudio, setStagingAddAudio] = useState<File[]>([]);
+  const [pendingRemoveAudioIds, setPendingRemoveAudioIds] = useState<Set<string>>(new Set());
   const [formError, setFormError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const audioInputRef = useRef<HTMLInputElement>(null);
 
   const queryClient = useQueryClient();
   const isFormOpen = isCreating || isEditing;
@@ -55,7 +62,7 @@ export function PerformanceDetailPanel({
         if (!data) throw new Error("Tag creation returned no data.");
         return data.id;
       });
-      const { error: apiError } = await performancesApi.create({
+      const { data, error: apiError } = await performancesApi.create({
         performance_date: editDate,
         stream_number: editStreamNumber,
         performance_number: editPerformanceNumber,
@@ -67,6 +74,8 @@ export function PerformanceDetailPanel({
         lyrics: editLyrics.trim() !== "" ? editLyrics.trim() : null,
       });
       if (apiError) throw apiError;
+      if (!data) throw new Error("Performance creation returned no data.");
+      await applyAll(stagingAddAudio, (file) => performancesApi.uploadAudio(data.id, file));
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: performanceKeys.all() });
@@ -98,10 +107,16 @@ export function PerformanceDetailPanel({
         title: editTitle.trim() !== "" ? editTitle.trim() : null,
       });
       if (apiError) throw apiError;
+      await applyAll(stagingAddAudio, (file) => performancesApi.uploadAudio(performance.id, file));
+      await applyAll(pendingRemoveAudioIds, (id) =>
+        performancesApi.deleteAudio(performance.id, id),
+      );
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: performanceKeys.all() });
       void queryClient.invalidateQueries({ queryKey: tagKeys.all() });
+      setStagingAddAudio([]);
+      setPendingRemoveAudioIds(new Set());
       setIsEditing(false);
       setFormError(null);
     },
@@ -143,11 +158,15 @@ export function PerformanceDetailPanel({
         kind: PERFORMANCE_TAG_KINDS.find((k) => k === tag.kind) ?? "misc",
       })),
     );
+    setStagingAddAudio([]);
+    setPendingRemoveAudioIds(new Set());
     setFormError(null);
     setIsEditing(true);
   }
 
   function cancelEditing() {
+    setStagingAddAudio([]);
+    setPendingRemoveAudioIds(new Set());
     setIsEditing(false);
     setFormError(null);
   }
@@ -195,6 +214,7 @@ export function PerformanceDetailPanel({
     const displayTitle = isCreating
       ? "New performance"
       : (performance.title ?? formatDate(performance.performance_date));
+    const existingAudio = isEditing ? (performanceDetail?.audio ?? []) : [];
     return (
       <>
         <div className="admin-panel-header">
@@ -352,6 +372,63 @@ export function PerformanceDetailPanel({
               />
             </div>
           )}
+          <div className="form-field">
+            <div className="admin-link-card-header">
+              <span className="form-label">Audio</span>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  audioInputRef.current?.click();
+                }}
+              >
+                Add audio
+              </button>
+            </div>
+            <input
+              ref={audioInputRef}
+              type="file"
+              accept="audio/*,video/mp4"
+              className="sr-only"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) setStagingAddAudio((prev) => [...prev, file]);
+                event.target.value = "";
+              }}
+            />
+            {existingAudio
+              .filter((a) => !pendingRemoveAudioIds.has(a.id))
+              .map((audio: MediaInfo) => (
+                <div key={audio.id} className="admin-audio-item">
+                  <span className="admin-link-url text-sm text-fg-muted">
+                    {audio.public_url.split("/").pop()}
+                  </span>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      setPendingRemoveAudioIds((prev) => new Set([...prev, audio.id]));
+                    }}
+                  >
+                    <TrashIcon weight="bold" />
+                  </button>
+                </div>
+              ))}
+            {stagingAddAudio.map((file, index) => (
+              <div key={index} className="admin-audio-item">
+                <span className="text-sm text-fg-muted">{file.name}</span>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    setStagingAddAudio((prev) => prev.filter((_, i) => i !== index));
+                  }}
+                >
+                  <TrashIcon weight="bold" />
+                </button>
+              </div>
+            ))}
+          </div>
           {formError !== null && <p className="form-error">{formError}</p>}
         </div>
       </>
@@ -458,6 +535,23 @@ export function PerformanceDetailPanel({
                   </span>
                 ))}
               </div>
+            </div>
+          )}
+          {performanceDetail.audio.length > 0 && (
+            <div className="admin-detail-section">
+              <span className="admin-detail-label">Audio</span>
+              {performanceDetail.audio.map((audio: MediaInfo) => (
+                <div key={audio.id} className="admin-audio-item">
+                  <a
+                    href={audio.public_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="admin-link-url"
+                  >
+                    {audio.public_url.split("/").pop()}
+                  </a>
+                </div>
+              ))}
             </div>
           )}
         </div>

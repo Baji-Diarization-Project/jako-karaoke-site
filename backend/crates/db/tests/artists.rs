@@ -16,6 +16,7 @@ async fn create_image(pool: &MySqlPool, url: &str) -> Uuid {
     images::create(
         &mut conn,
         &NewImage {
+            hash: format!("{:064x}", url.len()),
             public_url: url.to_string(),
             internal_path: None,
             credits: None,

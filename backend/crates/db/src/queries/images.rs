@@ -14,7 +14,7 @@ pub async fn get_by_id(
     id: Uuid,
 ) -> Result<Option<Image>> {
     sqlx::query_as::<_, Image>(
-        "SELECT id, public_url, internal_path, credits FROM images WHERE id = ?",
+        "SELECT id, hash, public_url, internal_path, credits FROM images WHERE id = ?",
     )
     .bind(id)
     .fetch_optional(executor)
@@ -22,12 +22,46 @@ pub async fn get_by_id(
     .map_err(DbError::from)
 }
 
+/// Fetches an image by its SHA-256 hash.
+pub async fn get_by_hash(
+    executor: impl Executor<'_, Database = MySql>,
+    hash: &str,
+) -> Result<Option<Image>> {
+    sqlx::query_as::<_, Image>(
+        "SELECT id, hash, public_url, internal_path, credits FROM images WHERE hash = ?",
+    )
+    .bind(hash)
+    .fetch_optional(executor)
+    .await
+    .map_err(DbError::from)
+}
+
+/// Returns the total number of join rows referencing this image across all resource types.
+///
+/// Used to determine whether a physical file and its `images` row can be safely removed.
+pub async fn reference_count(
+    executor: impl Executor<'_, Database = MySql>,
+    image_id: Uuid,
+) -> Result<i64> {
+    sqlx::query_scalar::<_, i64>(
+        "SELECT \
+            (SELECT COUNT(*) FROM song_images WHERE image_id = ?) + \
+            (SELECT COUNT(*) FROM artist_images WHERE image_id = ?)",
+    )
+    .bind(image_id)
+    .bind(image_id)
+    .fetch_one(executor)
+    .await
+    .map_err(DbError::from)
+}
+
 /// Inserts a new image record and returns the created row.
 pub async fn create(conn: &mut MySqlConnection, new: &NewImage) -> Result<Image> {
     sqlx::query_as::<_, Image>(
-        "INSERT INTO images (public_url, internal_path, credits) VALUES (?, ?, ?) \
-         RETURNING id, public_url, internal_path, credits",
+        "INSERT INTO images (hash, public_url, internal_path, credits) VALUES (?, ?, ?, ?) \
+         RETURNING id, hash, public_url, internal_path, credits",
     )
+    .bind(&new.hash)
     .bind(&new.public_url)
     .bind(&new.internal_path)
     .bind(&new.credits)

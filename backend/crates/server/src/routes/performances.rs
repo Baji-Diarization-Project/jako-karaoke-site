@@ -182,7 +182,7 @@ pub(crate) async fn build_performance_summaries(
 #[derive(utoipa::ToSchema)]
 #[allow(dead_code)]
 pub(crate) struct FileUpload {
-    #[schema(format = Binary)]
+    #[schema(value_type = String, format = Binary)]
     pub file: Vec<u8>,
 }
 
