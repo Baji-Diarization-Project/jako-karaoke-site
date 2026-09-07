@@ -6,6 +6,9 @@ export type SongSummary = components["schemas"]["SongSummary"];
 export type SongResponse = components["schemas"]["SongResponse"];
 export type SongTagKind = components["schemas"]["SongTagKind"];
 export type SongImageInfo = components["schemas"]["SongImageInfo"];
+export type SongImageKind = components["schemas"]["SongImageKind"];
+
+export const SONG_IMAGE_KINDS = ["cover_art"] as const satisfies readonly SongImageKind[];
 
 export const SONG_TAG_KINDS = [
   "genre",
@@ -51,6 +54,13 @@ export const songsApi = {
         if (credits) form.append("credits", credits);
         return form;
       },
+    }),
+
+  /** Updates the kind of an image linked to a song. */
+  updateImageKind: (id: string, imageId: string, kind: SongImageKind) =>
+    api.PATCH("/api/songs/{id}/images/{image_id}", {
+      params: { path: { id, image_id: imageId } },
+      body: { kind } satisfies components["schemas"]["UpdateSongImageRequest"],
     }),
 
   /** Removes an image link from a song, deleting the image file if no other resource references it. */

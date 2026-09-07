@@ -8,6 +8,8 @@ export type ArtistLinkInfo = components["schemas"]["ArtistLinkInfo"];
 export type ArtistImageInfo = components["schemas"]["ArtistImageInfo"];
 export type ArtistImageKind = components["schemas"]["ArtistImageKind"];
 
+export const ARTIST_IMAGE_KINDS = ["avatar"] as const satisfies readonly ArtistImageKind[];
+
 export const ARTIST_LINK_KINDS = [
   "youtube",
   "website",
@@ -53,6 +55,13 @@ export const artistsApi = {
         if (credits) form.append("credits", credits);
         return form;
       },
+    }),
+
+  /** Updates the kind of an image linked to an artist. */
+  updateImageKind: (id: string, imageId: string, kind: ArtistImageKind) =>
+    api.PATCH("/api/artists/{id}/images/{image_id}", {
+      params: { path: { id, image_id: imageId } },
+      body: { kind } satisfies components["schemas"]["UpdateArtistImageRequest"],
     }),
 
   /** Removes an image link from an artist, deleting the image file if no other resource references it. */

@@ -3,9 +3,11 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 
 import {
+  ARTIST_IMAGE_KINDS,
   ARTIST_LINK_KINDS,
   artistsApi,
   type ArtistImageInfo,
+  type ArtistImageKind,
   type ArtistLinkKind,
   type ArtistSummary,
 } from "@/api/artists";
@@ -41,6 +43,9 @@ export function ArtistDetailPanel({
   const [editLinks, setEditLinks] = useState<LinkDraft[]>([]);
   const [stagingAddImages, setStagingAddImages] = useState<File[]>([]);
   const [pendingRemoveIds, setPendingRemoveIds] = useState<Set<string>>(new Set());
+  const [pendingImageKindChanges, setPendingImageKindChanges] = useState<
+    Map<string, ArtistImageKind>
+  >(new Map());
   const [formError, setFormError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
@@ -90,12 +95,16 @@ export function ArtistDetailPanel({
       });
       if (apiError) throw apiError;
       await applyAll(stagingAddImages, (file) => artistsApi.uploadImage(artist.id, file, "avatar"));
+      await applyAll(pendingImageKindChanges, ([imageId, kind]) =>
+        artistsApi.updateImageKind(artist.id, imageId, kind),
+      );
       await applyAll(pendingRemoveIds, (id) => artistsApi.deleteImage(artist.id, id));
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: artistKeys.all() });
       setStagingAddImages([]);
       setPendingRemoveIds(new Set());
+      setPendingImageKindChanges(new Map());
       setIsEditing(false);
       setFormError(null);
     },
@@ -126,6 +135,7 @@ export function ArtistDetailPanel({
     setEditLinks(artistDetail.links.map(linkDraftFromInfo));
     setStagingAddImages([]);
     setPendingRemoveIds(new Set());
+    setPendingImageKindChanges(new Map());
     setFormError(null);
     setIsEditing(true);
   }
@@ -133,6 +143,7 @@ export function ArtistDetailPanel({
   function cancelEditing() {
     setStagingAddImages([]);
     setPendingRemoveIds(new Set());
+    setPendingImageKindChanges(new Map());
     setIsEditing(false);
     setFormError(null);
   }
@@ -298,6 +309,21 @@ export function ArtistDetailPanel({
                   .map((img) => (
                     <div key={img.id} className="admin-image-item">
                       <img src={img.public_url} alt={img.kind} />
+                      <select
+                        className="admin-kind-select"
+                        value={pendingImageKindChanges.get(img.id) ?? img.kind}
+                        onChange={(event) => {
+                          const newKind = ARTIST_IMAGE_KINDS.find((k) => k === event.target.value);
+                          if (!newKind) return;
+                          setPendingImageKindChanges((prev) => new Map(prev).set(img.id, newKind));
+                        }}
+                      >
+                        {ARTIST_IMAGE_KINDS.map((k) => (
+                          <option key={k} value={k}>
+                            {k}
+                          </option>
+                        ))}
+                      </select>
                       <button
                         type="button"
                         className="admin-image-delete"

@@ -3,9 +3,11 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 
 import {
+  SONG_IMAGE_KINDS,
   SONG_TAG_KINDS,
   songsApi,
   type SongImageInfo,
+  type SongImageKind,
   type SongSummary,
   type SongTagKind,
 } from "@/api/songs";
@@ -33,6 +35,9 @@ export function SongDetailPanel({
   const [editTags, setEditTags] = useState<TagAssignment<SongTagKind>[]>([]);
   const [stagingAddImages, setStagingAddImages] = useState<File[]>([]);
   const [pendingRemoveIds, setPendingRemoveIds] = useState<Set<string>>(new Set());
+  const [pendingImageKindChanges, setPendingImageKindChanges] = useState<
+    Map<string, SongImageKind>
+  >(new Map());
   const [formError, setFormError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
@@ -88,6 +93,9 @@ export function SongDetailPanel({
       });
       if (apiError) throw apiError;
       await applyAll(stagingAddImages, (file) => songsApi.uploadImage(song.id, file, "cover_art"));
+      await applyAll(pendingImageKindChanges, ([imageId, kind]) =>
+        songsApi.updateImageKind(song.id, imageId, kind),
+      );
       await applyAll(pendingRemoveIds, (id) => songsApi.deleteImage(song.id, id));
     },
     onSuccess: () => {
@@ -95,6 +103,7 @@ export function SongDetailPanel({
       void queryClient.invalidateQueries({ queryKey: tagKeys.all() });
       setStagingAddImages([]);
       setPendingRemoveIds(new Set());
+      setPendingImageKindChanges(new Map());
       setIsEditing(false);
       setFormError(null);
     },
@@ -131,6 +140,7 @@ export function SongDetailPanel({
     );
     setStagingAddImages([]);
     setPendingRemoveIds(new Set());
+    setPendingImageKindChanges(new Map());
     setFormError(null);
     setIsEditing(true);
   }
@@ -138,6 +148,7 @@ export function SongDetailPanel({
   function cancelEditing() {
     setStagingAddImages([]);
     setPendingRemoveIds(new Set());
+    setPendingImageKindChanges(new Map());
     setIsEditing(false);
     setFormError(null);
   }
@@ -268,6 +279,21 @@ export function SongDetailPanel({
                   .map((img) => (
                     <div key={img.id} className="admin-image-item">
                       <img src={img.public_url} alt={img.kind} />
+                      <select
+                        className="admin-kind-select"
+                        value={pendingImageKindChanges.get(img.id) ?? img.kind}
+                        onChange={(event) => {
+                          const newKind = SONG_IMAGE_KINDS.find((k) => k === event.target.value);
+                          if (!newKind) return;
+                          setPendingImageKindChanges((prev) => new Map(prev).set(img.id, newKind));
+                        }}
+                      >
+                        {SONG_IMAGE_KINDS.map((k) => (
+                          <option key={k} value={k}>
+                            {k}
+                          </option>
+                        ))}
+                      </select>
                       <button
                         type="button"
                         className="admin-image-delete"
