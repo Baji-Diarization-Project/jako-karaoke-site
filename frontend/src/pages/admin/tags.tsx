@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { tagsApi } from "@/api/tags";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { tagKeys, useTags } from "@/hooks/api/tags";
 
 export function TagsAdminTab() {
@@ -85,40 +86,30 @@ export function TagsAdminTab() {
         {filtered.map((tag) => (
           <li key={tag.id} className="admin-tag-item">
             <span className="admin-tag-name">{tag.name}</span>
-            {confirmDeleteId === tag.id ? (
-              <div className="admin-tag-confirm">
-                <span className="admin-empty">Delete?</span>
-                <button
-                  className="btn btn-primary"
-                  onClick={() => {
-                    deleteMutation.mutate(tag.id);
-                  }}
-                  disabled={deleteMutation.isPending}
-                >
-                  Yes
-                </button>
-                <button
-                  className="btn btn-secondary"
-                  onClick={() => {
-                    setConfirmDeleteId(null);
-                  }}
-                >
-                  No
-                </button>
-              </div>
-            ) : (
-              <button
-                className="btn btn-secondary"
-                onClick={() => {
-                  setConfirmDeleteId(tag.id);
-                }}
-              >
-                Delete
-              </button>
-            )}
+            <button
+              className="btn btn-secondary"
+              onClick={() => {
+                setConfirmDeleteId(tag.id);
+              }}
+            >
+              Delete
+            </button>
           </li>
         ))}
       </ul>
+
+      <ConfirmDialog
+        open={confirmDeleteId !== null}
+        onClose={() => {
+          setConfirmDeleteId(null);
+          deleteMutation.reset();
+        }}
+        onConfirm={() => {
+          if (confirmDeleteId) deleteMutation.mutate(confirmDeleteId);
+        }}
+        isPending={deleteMutation.isPending}
+        error={deleteMutation.isError ? "Failed to delete tag." : null}
+      />
 
       <Dialog.Root open={createOpen} onOpenChange={handleCreateOpenChange}>
         <Dialog.Portal>

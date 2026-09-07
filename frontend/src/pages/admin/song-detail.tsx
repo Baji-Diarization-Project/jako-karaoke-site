@@ -11,6 +11,7 @@ import {
   type SongTagKind,
 } from "@/api/songs";
 import { tagsApi } from "@/api/tags";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { useArtists } from "@/hooks/api/artists";
 import { songKeys, useSong } from "@/hooks/api/songs";
 import { tagKeys, useTags } from "@/hooks/api/tags";
@@ -29,7 +30,7 @@ export function SongDetailPanel({
 }) {
   const isCreating = song === null;
   const [isEditing, setIsEditing] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [editTitle, setEditTitle] = useState("");
   const [editArtistIds, setEditArtistIds] = useState<string[]>([]);
   const [editTags, setEditTags] = useState<TagAssignment<SongTagKind>[]>([]);
@@ -39,7 +40,6 @@ export function SongDetailPanel({
     Map<string, SongImageKind>
   >(new Map());
   const [formError, setFormError] = useState<string | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const queryClient = useQueryClient();
   const isFormOpen = isCreating || isEditing;
@@ -119,9 +119,6 @@ export function SongDetailPanel({
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: songKeys.all() });
       onClose();
-    },
-    onError: () => {
-      setDeleteError("Failed to delete song.");
     },
   });
 
@@ -275,46 +272,32 @@ export function SongDetailPanel({
     <>
       <div className="admin-panel-header">
         <h3 className="admin-panel-title">{song.title}</h3>
-        {confirmDelete ? (
-          <div className="admin-tag-confirm">
-            <span className="admin-empty">Delete?</span>
-            <button
-              className="btn btn-primary"
-              onClick={() => {
-                deleteMutation.mutate();
-              }}
-              disabled={deleteMutation.isPending}
-            >
-              Yes
-            </button>
-            <button
-              className="btn btn-secondary"
-              onClick={() => {
-                setConfirmDelete(false);
-                setDeleteError(null);
-              }}
-            >
-              No
-            </button>
-          </div>
-        ) : (
-          <div className="admin-tag-confirm">
-            <button className="btn btn-secondary" onClick={startEditing} disabled={!songDetail}>
-              Edit
-            </button>
-            <button
-              className="btn btn-secondary"
-              onClick={() => {
-                setConfirmDelete(true);
-              }}
-            >
-              Delete
-            </button>
-          </div>
-        )}
+        <div className="admin-tag-confirm">
+          <button className="btn btn-secondary" onClick={startEditing} disabled={!songDetail}>
+            Edit
+          </button>
+          <button
+            className="btn btn-secondary"
+            onClick={() => {
+              setDeleteOpen(true);
+            }}
+          >
+            Delete
+          </button>
+        </div>
       </div>
-
-      {deleteError !== null && <p className="form-error">{deleteError}</p>}
+      <ConfirmDialog
+        open={deleteOpen}
+        onClose={() => {
+          setDeleteOpen(false);
+          deleteMutation.reset();
+        }}
+        onConfirm={() => {
+          deleteMutation.mutate();
+        }}
+        isPending={deleteMutation.isPending}
+        error={deleteMutation.isError ? "Failed to delete song." : null}
+      />
 
       {songDetail && (
         <div className="admin-panel-scroll">

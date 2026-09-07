@@ -11,6 +11,7 @@ import {
   type ArtistLinkKind,
   type ArtistSummary,
 } from "@/api/artists";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { artistKeys, useArtist } from "@/hooks/api/artists";
 import { applyAll } from "@/lib/staging";
 
@@ -39,7 +40,7 @@ export function ArtistDetailPanel({
 }) {
   const isCreating = artist === null;
   const [isEditing, setIsEditing] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [editName, setEditName] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [editLinks, setEditLinks] = useState<LinkDraft[]>([]);
@@ -49,7 +50,6 @@ export function ArtistDetailPanel({
     Map<string, ArtistImageKind>
   >(new Map());
   const [formError, setFormError] = useState<string | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const queryClient = useQueryClient();
 
@@ -122,9 +122,6 @@ export function ArtistDetailPanel({
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: artistKeys.all() });
       onClose();
-    },
-    onError: () => {
-      setDeleteError("Failed to delete artist.");
     },
   });
 
@@ -307,46 +304,32 @@ export function ArtistDetailPanel({
     <>
       <div className="admin-panel-header">
         <h3 className="admin-panel-title">{artist.name}</h3>
-        {confirmDelete ? (
-          <div className="admin-tag-confirm">
-            <span className="admin-empty">Delete?</span>
-            <button
-              className="btn btn-primary"
-              onClick={() => {
-                deleteMutation.mutate();
-              }}
-              disabled={deleteMutation.isPending}
-            >
-              Yes
-            </button>
-            <button
-              className="btn btn-secondary"
-              onClick={() => {
-                setConfirmDelete(false);
-                setDeleteError(null);
-              }}
-            >
-              No
-            </button>
-          </div>
-        ) : (
-          <div className="admin-tag-confirm">
-            <button className="btn btn-secondary" onClick={startEditing} disabled={!artistDetail}>
-              Edit
-            </button>
-            <button
-              className="btn btn-secondary"
-              onClick={() => {
-                setConfirmDelete(true);
-              }}
-            >
-              Delete
-            </button>
-          </div>
-        )}
+        <div className="admin-tag-confirm">
+          <button className="btn btn-secondary" onClick={startEditing} disabled={!artistDetail}>
+            Edit
+          </button>
+          <button
+            className="btn btn-secondary"
+            onClick={() => {
+              setDeleteOpen(true);
+            }}
+          >
+            Delete
+          </button>
+        </div>
       </div>
-
-      {deleteError !== null && <p className="form-error">{deleteError}</p>}
+      <ConfirmDialog
+        open={deleteOpen}
+        onClose={() => {
+          setDeleteOpen(false);
+          deleteMutation.reset();
+        }}
+        onConfirm={() => {
+          deleteMutation.mutate();
+        }}
+        isPending={deleteMutation.isPending}
+        error={deleteMutation.isError ? "Failed to delete artist." : null}
+      />
 
       {artistDetail && (
         <div className="admin-panel-scroll">
