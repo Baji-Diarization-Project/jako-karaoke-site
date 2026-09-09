@@ -1,0 +1,68 @@
+@utility dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: var(--color-overlay);
+}
+
+@utility dialog-popup {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  max-width: 24rem;
+  border-radius: 0.5rem;
+  background-color: var(--color-surface);
+  padding: 1.5rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  outline: none;
+  color: var(--color-fg);
+}
+
+@utility dialog-popup--wide {
+  max-width: 32rem;
+  width: 90vw;
+}
+
+@utility dialog-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 0;
+  line-height: 1;
+  color: var(--color-fg-muted);
+  transition: color 0.15s;
+
+  &:hover {
+    color: var(--color-fg);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-fg);
+    outline-offset: 2px;
+    border-radius: 0.25rem;
+  }
+}
+
+@utility dialog-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-fg);
+  margin-bottom: 1.25rem;
+}
+
+@utility dialog-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+@utility dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}

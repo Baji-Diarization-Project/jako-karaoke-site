@@ -245,6 +245,23 @@ pub async fn link_image(
         .map_err(DbError::from)
 }
 
+/// Updates the kind of an `artist_images` join row. Returns `true` if a row was updated.
+pub async fn update_image_kind(
+    conn: &mut MySqlConnection,
+    artist_id: Uuid,
+    image_id: Uuid,
+    kind: &str,
+) -> Result<bool> {
+    sqlx::query("UPDATE artist_images SET kind = ? WHERE artist_id = ? AND image_id = ?")
+        .bind(kind)
+        .bind(artist_id)
+        .bind(image_id)
+        .execute(conn)
+        .await
+        .map(|r| r.rows_affected() > 0)
+        .map_err(DbError::from)
+}
+
 /// Removes a single `artist_images` join row. Returns `true` if a row was deleted.
 pub async fn unlink_image(
     executor: impl Executor<'_, Database = MySql>,

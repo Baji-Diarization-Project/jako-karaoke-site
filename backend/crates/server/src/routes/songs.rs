@@ -7,7 +7,7 @@ use axum::{
     Json, Router,
     extract::{DefaultBodyLimit, Path, Query, State},
     http::StatusCode,
-    routing::{delete, get, post},
+    routing::{get, patch, post},
 };
 use uuid::Uuid;
 
@@ -17,7 +17,7 @@ use api_types::{
     pagination::{PagedResponse, SearchPaginationParams},
     songs::{
         CreateSongRequest, SongImageInfo, SongImageKind, SongResponse, SongSummary,
-        SongTagAssignment, UpdateSongRequest,
+        SongTagAssignment, UpdateSongImageRequest, UpdateSongRequest,
     },
     tags::SongTagKind,
 };
@@ -41,6 +41,7 @@ use crate::{
         update_song,
         delete_song,
         images::upload_song_image,
+        images::update_song_image_kind,
         images::delete_song_image,
         lyrics::get_song_lyrics,
         lyrics::put_song_lyrics,
@@ -55,6 +56,7 @@ use crate::{
         SongTagKind,
         SongImageKind,
         SongImageInfo,
+        UpdateSongImageRequest,
         images::ImageUpload,
         LyricsResponse,
         UpdateLyricsRequest,
@@ -74,7 +76,10 @@ pub fn router() -> Router<AppState> {
             "/{id}/images",
             post(images::upload_song_image).layer(DefaultBodyLimit::max(50 * 1024 * 1024)),
         )
-        .route("/{id}/images/{image_id}", delete(images::delete_song_image))
+        .route(
+            "/{id}/images/{image_id}",
+            patch(images::update_song_image_kind).delete(images::delete_song_image),
+        )
         .route(
             "/{id}/lyrics",
             get(lyrics::get_song_lyrics)

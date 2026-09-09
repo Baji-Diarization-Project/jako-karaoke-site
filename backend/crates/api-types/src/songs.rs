@@ -37,6 +37,12 @@ pub struct SongImageInfo {
     pub kind: String,
 }
 
+/// Request body for `PATCH /api/songs/{id}/images/{image_id}`.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct UpdateSongImageRequest {
+    pub kind: String,
+}
+
 /// A tag paired with its kind for application to a song.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct SongTagAssignment {

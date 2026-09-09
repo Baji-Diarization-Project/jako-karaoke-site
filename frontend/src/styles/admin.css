@@ -357,26 +357,6 @@
   border-top: 1px solid var(--color-border);
 }
 
-@utility admin-dialog-title {
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--color-fg);
-  margin-bottom: 1.25rem;
-}
-
-@utility admin-dialog-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-@utility admin-dialog-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  margin-top: 0.25rem;
-}
-
 @utility admin-detail-section {
   display: flex;
   flex-direction: column;

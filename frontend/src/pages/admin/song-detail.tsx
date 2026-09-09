@@ -1,20 +1,23 @@
-import { TrashIcon } from "@phosphor-icons/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useState } from "react";
 
 import {
+  SONG_IMAGE_KINDS,
   SONG_TAG_KINDS,
   songsApi,
   type SongImageInfo,
+  type SongImageKind,
   type SongSummary,
   type SongTagKind,
 } from "@/api/songs";
 import { tagsApi } from "@/api/tags";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { useArtists } from "@/hooks/api/artists";
 import { songKeys, useSong } from "@/hooks/api/songs";
 import { tagKeys, useTags } from "@/hooks/api/tags";
 import { applyAll } from "@/lib/staging";
 
+import { ImageEditSection } from "./image-edit-section";
 import { ItemPicker, TagPicker, type TagAssignment } from "./pickers";
 import { resolveTagAssignments } from "./tag-utils";
 
@@ -27,16 +30,16 @@ export function SongDetailPanel({
 }) {
   const isCreating = song === null;
   const [isEditing, setIsEditing] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [editTitle, setEditTitle] = useState("");
   const [editArtistIds, setEditArtistIds] = useState<string[]>([]);
   const [editTags, setEditTags] = useState<TagAssignment<SongTagKind>[]>([]);
   const [stagingAddImages, setStagingAddImages] = useState<File[]>([]);
   const [pendingRemoveIds, setPendingRemoveIds] = useState<Set<string>>(new Set());
+  const [pendingImageKindChanges, setPendingImageKindChanges] = useState<
+    Map<string, SongImageKind>
+  >(new Map());
   const [formError, setFormError] = useState<string | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-
-  const imageInputRef = useRef<HTMLInputElement>(null);
 
   const queryClient = useQueryClient();
   const isFormOpen = isCreating || isEditing;
@@ -88,6 +91,9 @@ export function SongDetailPanel({
       });
       if (apiError) throw apiError;
       await applyAll(stagingAddImages, (file) => songsApi.uploadImage(song.id, file, "cover_art"));
+      await applyAll(pendingImageKindChanges, ([imageId, kind]) =>
+        songsApi.updateImageKind(song.id, imageId, kind),
+      );
       await applyAll(pendingRemoveIds, (id) => songsApi.deleteImage(song.id, id));
     },
     onSuccess: () => {
@@ -95,6 +101,7 @@ export function SongDetailPanel({
       void queryClient.invalidateQueries({ queryKey: tagKeys.all() });
       setStagingAddImages([]);
       setPendingRemoveIds(new Set());
+      setPendingImageKindChanges(new Map());
       setIsEditing(false);
       setFormError(null);
     },
@@ -113,9 +120,6 @@ export function SongDetailPanel({
       void queryClient.invalidateQueries({ queryKey: songKeys.all() });
       onClose();
     },
-    onError: () => {
-      setDeleteError("Failed to delete song.");
-    },
   });
 
   function startEditing() {
@@ -131,6 +135,7 @@ export function SongDetailPanel({
     );
     setStagingAddImages([]);
     setPendingRemoveIds(new Set());
+    setPendingImageKindChanges(new Map());
     setFormError(null);
     setIsEditing(true);
   }
@@ -138,6 +143,7 @@ export function SongDetailPanel({
   function cancelEditing() {
     setStagingAddImages([]);
     setPendingRemoveIds(new Set());
+    setPendingImageKindChanges(new Map());
     setIsEditing(false);
     setFormError(null);
   }
@@ -237,65 +243,25 @@ export function SongDetailPanel({
             onRemove={removeTag}
             onKindChange={changeTagKind}
           />
-          <div className="form-field">
-            <div className="admin-link-card-header">
-              <span className="form-label">Images</span>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => {
-                  imageInputRef.current?.click();
-                }}
-              >
-                Add image
-              </button>
-            </div>
-            <input
-              ref={imageInputRef}
-              type="file"
-              accept="image/*"
-              className="sr-only"
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (file) setStagingAddImages((prev) => [...prev, file]);
-                event.target.value = "";
-              }}
-            />
-            {existingImages.filter((img) => !pendingRemoveIds.has(img.id)).length > 0 && (
-              <div className="admin-image-list">
-                {existingImages
-                  .filter((img) => !pendingRemoveIds.has(img.id))
-                  .map((img) => (
-                    <div key={img.id} className="admin-image-item">
-                      <img src={img.public_url} alt={img.kind} />
-                      <button
-                        type="button"
-                        className="admin-image-delete"
-                        onClick={() => {
-                          setPendingRemoveIds((prev) => new Set([...prev, img.id]));
-                        }}
-                      >
-                        <TrashIcon weight="bold" />
-                      </button>
-                    </div>
-                  ))}
-              </div>
-            )}
-            {stagingAddImages.map((file, index) => (
-              <div key={index} className="admin-audio-item">
-                <span className="text-sm text-fg-muted">{file.name}</span>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => {
-                    setStagingAddImages((prev) => prev.filter((_, i) => i !== index));
-                  }}
-                >
-                  <TrashIcon weight="bold" />
-                </button>
-              </div>
-            ))}
-          </div>
+          <ImageEditSection
+            existingImages={existingImages}
+            pendingRemoveIds={pendingRemoveIds}
+            pendingKindChanges={pendingImageKindChanges}
+            stagingFiles={stagingAddImages}
+            kinds={SONG_IMAGE_KINDS}
+            onFileSelect={(file) => {
+              setStagingAddImages((prev) => [...prev, file]);
+            }}
+            onRemoveExisting={(id) => {
+              setPendingRemoveIds((prev) => new Set([...prev, id]));
+            }}
+            onChangeExistingKind={(id, kind) => {
+              setPendingImageKindChanges((prev) => new Map(prev).set(id, kind));
+            }}
+            onRemoveStaged={(index) => {
+              setStagingAddImages((prev) => prev.filter((_, i) => i !== index));
+            }}
+          />
           {formError !== null && <p className="form-error">{formError}</p>}
         </div>
       </>
@@ -306,46 +272,32 @@ export function SongDetailPanel({
     <>
       <div className="admin-panel-header">
         <h3 className="admin-panel-title">{song.title}</h3>
-        {confirmDelete ? (
-          <div className="admin-tag-confirm">
-            <span className="admin-empty">Delete?</span>
-            <button
-              className="btn btn-primary"
-              onClick={() => {
-                deleteMutation.mutate();
-              }}
-              disabled={deleteMutation.isPending}
-            >
-              Yes
-            </button>
-            <button
-              className="btn btn-secondary"
-              onClick={() => {
-                setConfirmDelete(false);
-                setDeleteError(null);
-              }}
-            >
-              No
-            </button>
-          </div>
-        ) : (
-          <div className="admin-tag-confirm">
-            <button className="btn btn-secondary" onClick={startEditing} disabled={!songDetail}>
-              Edit
-            </button>
-            <button
-              className="btn btn-secondary"
-              onClick={() => {
-                setConfirmDelete(true);
-              }}
-            >
-              Delete
-            </button>
-          </div>
-        )}
+        <div className="admin-tag-confirm">
+          <button className="btn btn-secondary" onClick={startEditing} disabled={!songDetail}>
+            Edit
+          </button>
+          <button
+            className="btn btn-secondary"
+            onClick={() => {
+              setDeleteOpen(true);
+            }}
+          >
+            Delete
+          </button>
+        </div>
       </div>
-
-      {deleteError !== null && <p className="form-error">{deleteError}</p>}
+      <ConfirmDialog
+        open={deleteOpen}
+        onClose={() => {
+          setDeleteOpen(false);
+          deleteMutation.reset();
+        }}
+        onConfirm={() => {
+          deleteMutation.mutate();
+        }}
+        isPending={deleteMutation.isPending}
+        error={deleteMutation.isError ? "Failed to delete song." : null}
+      />
 
       {songDetail && (
         <div className="admin-panel-scroll">

@@ -1,16 +1,21 @@
-import { TrashIcon, XIcon } from "@phosphor-icons/react";
+import { XIcon } from "@phosphor-icons/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useState } from "react";
 
 import {
+  ARTIST_IMAGE_KINDS,
   ARTIST_LINK_KINDS,
   artistsApi,
   type ArtistImageInfo,
+  type ArtistImageKind,
   type ArtistLinkKind,
   type ArtistSummary,
 } from "@/api/artists";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { artistKeys, useArtist } from "@/hooks/api/artists";
 import { applyAll } from "@/lib/staging";
+
+import { ImageEditSection } from "./image-edit-section";
 
 type LinkDraft = { url: string; kind: ArtistLinkKind; label: string };
 
@@ -35,16 +40,16 @@ export function ArtistDetailPanel({
 }) {
   const isCreating = artist === null;
   const [isEditing, setIsEditing] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [editName, setEditName] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [editLinks, setEditLinks] = useState<LinkDraft[]>([]);
   const [stagingAddImages, setStagingAddImages] = useState<File[]>([]);
   const [pendingRemoveIds, setPendingRemoveIds] = useState<Set<string>>(new Set());
+  const [pendingImageKindChanges, setPendingImageKindChanges] = useState<
+    Map<string, ArtistImageKind>
+  >(new Map());
   const [formError, setFormError] = useState<string | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-
-  const imageInputRef = useRef<HTMLInputElement>(null);
 
   const queryClient = useQueryClient();
 
@@ -90,12 +95,16 @@ export function ArtistDetailPanel({
       });
       if (apiError) throw apiError;
       await applyAll(stagingAddImages, (file) => artistsApi.uploadImage(artist.id, file, "avatar"));
+      await applyAll(pendingImageKindChanges, ([imageId, kind]) =>
+        artistsApi.updateImageKind(artist.id, imageId, kind),
+      );
       await applyAll(pendingRemoveIds, (id) => artistsApi.deleteImage(artist.id, id));
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: artistKeys.all() });
       setStagingAddImages([]);
       setPendingRemoveIds(new Set());
+      setPendingImageKindChanges(new Map());
       setIsEditing(false);
       setFormError(null);
     },
@@ -114,9 +123,6 @@ export function ArtistDetailPanel({
       void queryClient.invalidateQueries({ queryKey: artistKeys.all() });
       onClose();
     },
-    onError: () => {
-      setDeleteError("Failed to delete artist.");
-    },
   });
 
   function startEditing() {
@@ -126,6 +132,7 @@ export function ArtistDetailPanel({
     setEditLinks(artistDetail.links.map(linkDraftFromInfo));
     setStagingAddImages([]);
     setPendingRemoveIds(new Set());
+    setPendingImageKindChanges(new Map());
     setFormError(null);
     setIsEditing(true);
   }
@@ -133,6 +140,7 @@ export function ArtistDetailPanel({
   function cancelEditing() {
     setStagingAddImages([]);
     setPendingRemoveIds(new Set());
+    setPendingImageKindChanges(new Map());
     setIsEditing(false);
     setFormError(null);
   }
@@ -267,65 +275,25 @@ export function ArtistDetailPanel({
               </button>
             </div>
           </div>
-          <div className="form-field">
-            <div className="admin-link-card-header">
-              <span className="form-label">Images</span>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => {
-                  imageInputRef.current?.click();
-                }}
-              >
-                Add image
-              </button>
-            </div>
-            <input
-              ref={imageInputRef}
-              type="file"
-              accept="image/*"
-              className="sr-only"
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (file) setStagingAddImages((prev) => [...prev, file]);
-                event.target.value = "";
-              }}
-            />
-            {existingImages.filter((img) => !pendingRemoveIds.has(img.id)).length > 0 && (
-              <div className="admin-image-list">
-                {existingImages
-                  .filter((img) => !pendingRemoveIds.has(img.id))
-                  .map((img) => (
-                    <div key={img.id} className="admin-image-item">
-                      <img src={img.public_url} alt={img.kind} />
-                      <button
-                        type="button"
-                        className="admin-image-delete"
-                        onClick={() => {
-                          setPendingRemoveIds((prev) => new Set([...prev, img.id]));
-                        }}
-                      >
-                        <TrashIcon weight="bold" />
-                      </button>
-                    </div>
-                  ))}
-              </div>
-            )}
-            {stagingAddImages.map((file, index) => (
-              <div key={index} className="admin-audio-item">
-                <span className="text-sm text-fg-muted">{file.name}</span>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => {
-                    setStagingAddImages((prev) => prev.filter((_, i) => i !== index));
-                  }}
-                >
-                  <TrashIcon weight="bold" />
-                </button>
-              </div>
-            ))}
-          </div>
+          <ImageEditSection
+            existingImages={existingImages}
+            pendingRemoveIds={pendingRemoveIds}
+            pendingKindChanges={pendingImageKindChanges}
+            stagingFiles={stagingAddImages}
+            kinds={ARTIST_IMAGE_KINDS}
+            onFileSelect={(file) => {
+              setStagingAddImages((prev) => [...prev, file]);
+            }}
+            onRemoveExisting={(id) => {
+              setPendingRemoveIds((prev) => new Set([...prev, id]));
+            }}
+            onChangeExistingKind={(id, kind) => {
+              setPendingImageKindChanges((prev) => new Map(prev).set(id, kind));
+            }}
+            onRemoveStaged={(index) => {
+              setStagingAddImages((prev) => prev.filter((_, i) => i !== index));
+            }}
+          />
           {formError !== null && <p className="form-error">{formError}</p>}
         </div>
       </>
@@ -336,46 +304,32 @@ export function ArtistDetailPanel({
     <>
       <div className="admin-panel-header">
         <h3 className="admin-panel-title">{artist.name}</h3>
-        {confirmDelete ? (
-          <div className="admin-tag-confirm">
-            <span className="admin-empty">Delete?</span>
-            <button
-              className="btn btn-primary"
-              onClick={() => {
-                deleteMutation.mutate();
-              }}
-              disabled={deleteMutation.isPending}
-            >
-              Yes
-            </button>
-            <button
-              className="btn btn-secondary"
-              onClick={() => {
-                setConfirmDelete(false);
-                setDeleteError(null);
-              }}
-            >
-              No
-            </button>
-          </div>
-        ) : (
-          <div className="admin-tag-confirm">
-            <button className="btn btn-secondary" onClick={startEditing} disabled={!artistDetail}>
-              Edit
-            </button>
-            <button
-              className="btn btn-secondary"
-              onClick={() => {
-                setConfirmDelete(true);
-              }}
-            >
-              Delete
-            </button>
-          </div>
-        )}
+        <div className="admin-tag-confirm">
+          <button className="btn btn-secondary" onClick={startEditing} disabled={!artistDetail}>
+            Edit
+          </button>
+          <button
+            className="btn btn-secondary"
+            onClick={() => {
+              setDeleteOpen(true);
+            }}
+          >
+            Delete
+          </button>
+        </div>
       </div>
-
-      {deleteError !== null && <p className="form-error">{deleteError}</p>}
+      <ConfirmDialog
+        open={deleteOpen}
+        onClose={() => {
+          setDeleteOpen(false);
+          deleteMutation.reset();
+        }}
+        onConfirm={() => {
+          deleteMutation.mutate();
+        }}
+        isPending={deleteMutation.isPending}
+        error={deleteMutation.isError ? "Failed to delete artist." : null}
+      />
 
       {artistDetail && (
         <div className="admin-panel-scroll">

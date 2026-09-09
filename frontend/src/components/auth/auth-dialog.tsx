@@ -20,7 +20,7 @@ export function AuthDialog() {
           <Dialog.Close className="dialog-close" aria-label="Close">
             <XIcon size={16} />
           </Dialog.Close>
-          <div className="admin-dialog-form">
+          <div className="dialog-form">
             <Dialog.Title className="text-base font-semibold">Sign In</Dialog.Title>
             <div className="admin-link-list">
               <a href="/auth/twitch" className="btn oauth-btn btn-secondary">

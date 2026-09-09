@@ -204,6 +204,7 @@ CREATE TABLE IF NOT EXISTS performance_audios (
     performance_id BINARY(16) NOT NULL REFERENCES performances (id) ON DELETE CASCADE,
     public_url VARCHAR(512) NOT NULL,
     internal_path VARCHAR(512) NULL,
+    kind VARCHAR(32) NOT NULL,
     PRIMARY KEY (id),
     INDEX (performance_id)
 ) ENGINE = InnoDB;
@@ -214,6 +215,7 @@ CREATE TABLE IF NOT EXISTS performance_videos (
     performance_id BINARY(16) NOT NULL REFERENCES performances (id) ON DELETE CASCADE,
     public_url VARCHAR(512) NOT NULL,
     internal_path VARCHAR(512) NULL,
+    kind VARCHAR(32) NOT NULL,
     PRIMARY KEY (id),
     INDEX (performance_id)
 ) ENGINE = InnoDB;

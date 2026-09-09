@@ -12,6 +12,8 @@ pub struct PerformanceVideo {
     pub public_url: String,
     /// Absolute filesystem path used for actual file.
     pub internal_path: Option<String>,
+    /// Semantic role of this video (e.g. `"clip"`, `"vod"`, `"misc"`).
+    pub kind: String,
 }
 
 /// Input for creating a new performance video record.
@@ -20,4 +22,5 @@ pub struct NewPerformanceVideo {
     pub performance_id: Uuid,
     pub public_url: String,
     pub internal_path: Option<String>,
+    pub kind: String,
 }
