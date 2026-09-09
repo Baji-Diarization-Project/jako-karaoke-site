@@ -1,9 +1,12 @@
 import { useEffect } from "react";
+import { useState } from "react";
 import { Outlet } from "react-router";
 
 import { authApi } from "@/api/auth";
+import { MusicPlayer } from "@/components/musicplayer/musicplayer";
 import { useAuthStore } from "@/store/auth";
 
+import { HeaderMobile } from "./header-mobile/header-mobile";
 import { Sidebar } from "./sidebar/sidebar";
 
 export function RootLayout() {
@@ -18,12 +21,21 @@ export function RootLayout() {
     })();
   }, [setUser]);
 
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar />
-      <main className="flex-1 overflow-y-auto bg-canvas">
-        <Outlet />
-      </main>
+      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <HeaderMobile onOpenSidebar={() => setSidebarOpen(true)} />
+
+        <main className="flex-1 overflow-y-auto bg-canvas">
+          <Outlet />
+        </main>
+
+        <MusicPlayer />
+      </div>
     </div>
   );
 }
