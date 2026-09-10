@@ -2,12 +2,11 @@ import { MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
 
+import type { PerformanceSortField } from "@/api/performances";
 import { usePerformances } from "@/hooks/api/performances";
 import { useDebounced } from "@/hooks/use-debounced";
 
 import { PerformanceRow } from "./performance-row";
-
-type SortField = "performance_date" | "play_count" | "duration";
 
 /**
  * All active search and filter parameters, stored as a single ?query= URL param.
@@ -15,7 +14,7 @@ type SortField = "performance_date" | "play_count" | "duration";
  */
 interface SearchState {
   q?: string;
-  sort?: SortField;
+  sort?: PerformanceSortField;
   sort_dir?: "asc" | "desc";
   page?: number;
   per_page?: number;
@@ -140,7 +139,7 @@ export function SearchPage() {
     sort_dir: sortDir,
   });
 
-  function handleSortChange(field: SortField) {
+  function handleSortChange(field: PerformanceSortField) {
     if (sort === field) {
       updateSearch({ sort_dir: sortDir === "desc" ? "asc" : "desc", page: undefined });
     } else {
@@ -280,10 +279,10 @@ export function SearchPage() {
 
 interface SortHeaderProps {
   label: string;
-  field: SortField;
-  sort: SortField;
+  field: PerformanceSortField;
+  sort: PerformanceSortField;
   sortDir: "asc" | "desc";
-  onSort: (field: SortField) => void;
+  onSort: (field: PerformanceSortField) => void;
 }
 
 function SortHeader({ label, field, sort, sortDir, onSort }: SortHeaderProps) {

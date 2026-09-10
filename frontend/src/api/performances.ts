@@ -20,10 +20,13 @@ export const AUDIO_KINDS = ["primary", "misc"] as const satisfies readonly Audio
 
 export const VIDEO_KINDS = ["clip", "vod", "misc"] as const satisfies readonly VideoKind[];
 
+/** Fields available for sorting the performances list. */
+export type PerformanceSortField = "performance_date" | "play_count" | "duration";
+
 /** Query parameters accepted by the performances list endpoint. */
 export type PerformanceListParams = SearchPaginationParams & {
   /** Field to sort by. Defaults to performance_date. */
-  sort?: "performance_date" | "play_count" | "duration";
+  sort?: PerformanceSortField;
   /** Sort direction. Defaults to desc. */
   sort_dir?: "asc" | "desc";
 };
