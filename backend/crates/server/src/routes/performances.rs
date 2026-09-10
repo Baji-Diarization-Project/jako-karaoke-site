@@ -34,7 +34,8 @@ use db::{
 };
 
 use crate::{
-    auth::middleware::AuthUser, capabilities, error::ApiError, media, pagination, state::AppState,
+    auth::middleware::AuthUser, capabilities, error::ApiError, media, pagination,
+    routes::common::SortDir, state::AppState,
 };
 
 #[derive(utoipa::OpenApi)]
@@ -104,10 +105,7 @@ pub(crate) struct PerformanceListParams {
 
 impl PerformanceListParams {
     fn sort_dir_str(&self) -> &'static str {
-        match &self.sort_dir {
-            Some(SortDir::Asc) => "ASC",
-            _ => "DESC",
-        }
+        self.sort_dir.as_ref().map_or("DESC", SortDir::as_str)
     }
 
     fn order_by_clause(&self) -> String {
@@ -127,14 +125,6 @@ pub(crate) enum PerformanceSort {
     PerformanceDate,
     PlayCount,
     Duration,
-}
-
-/// Sort direction for list endpoints.
-#[derive(Debug, Clone, serde::Deserialize, utoipa::ToSchema)]
-#[serde(rename_all = "snake_case")]
-pub(crate) enum SortDir {
-    Asc,
-    Desc,
 }
 
 /// Hydrates a list of performances with singers and songs for use in summary responses.

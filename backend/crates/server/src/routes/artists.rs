@@ -17,7 +17,7 @@ use api_types::{
         UpdateArtistRequest,
     },
     common::ErrorResponse,
-    pagination::{PagedResponse, SearchPaginationParams},
+    pagination::{PagedResponse, defaults as pagination_defaults},
 };
 use db::{
     MySqlPool,
@@ -27,7 +27,8 @@ use db::{
 };
 
 use crate::{
-    auth::middleware::AuthUser, capabilities, error::ApiError, pagination, state::AppState,
+    auth::middleware::AuthUser, capabilities, error::ApiError, pagination, routes::common::SortDir,
+    state::AppState,
 };
 
 #[derive(utoipa::OpenApi)]
@@ -53,12 +54,50 @@ use crate::{
         ArtistLinkKind,
         CreateArtistRequest,
         UpdateArtistRequest,
+        ArtistSort,
+        SortDir,
         images::ImageUpload,
         ErrorResponse,
         PagedResponse<ArtistSummary>,
     ))
 )]
 pub(crate) struct ArtistsApi;
+
+/// Query parameters for `GET /api/artists`.
+#[derive(Debug, Clone, serde::Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
+pub(crate) struct ArtistListParams {
+    /// Page number, 1-indexed. Defaults to 1.
+    #[serde(default = "pagination_defaults::page")]
+    pub page: u32,
+    /// Items per page. Defaults to 20. The server enforces a maximum.
+    #[serde(default = "pagination_defaults::per_page")]
+    pub per_page: u32,
+    /// Text search by artist name.
+    pub q: Option<String>,
+    /// Field to sort by. Defaults to `name`.
+    pub sort: Option<ArtistSort>,
+    /// Sort direction. Defaults to `asc`.
+    pub sort_dir: Option<SortDir>,
+}
+
+impl ArtistListParams {
+    fn order_by_clause(&self) -> String {
+        let dir = self.sort_dir.as_ref().map_or("ASC", SortDir::as_str);
+        match &self.sort {
+            Some(ArtistSort::SongCount) => format!("song_count {dir}"),
+            _ => format!("name {dir}"),
+        }
+    }
+}
+
+/// Field to sort artists by in list endpoints.
+#[derive(Debug, Clone, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub(crate) enum ArtistSort {
+    Name,
+    SongCount,
+}
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -126,20 +165,21 @@ fn new_links(inputs: Vec<ArtistLinkInput>) -> Vec<NewArtistLink> {
 #[utoipa::path(
     get,
     path = "/api/artists",
-    params(SearchPaginationParams),
+    params(ArtistListParams),
     responses(
-        (status = 200, description = "Paginated list of artists ordered by name", body = PagedResponse<ArtistSummary>),
+        (status = 200, description = "Paginated list of artists", body = PagedResponse<ArtistSummary>),
     ),
     tag = "artists"
 )]
 pub(crate) async fn list_artists(
     State(state): State<AppState>,
-    Query(params): Query<SearchPaginationParams>,
+    Query(params): Query<ArtistListParams>,
 ) -> Result<Json<PagedResponse<ArtistSummary>>, ApiError> {
     let (limit, offset) = pagination::limit_offset(params.page, params.per_page);
     let q = params.q.as_deref().filter(|s| !s.is_empty());
+    let order_by = params.order_by_clause();
     let (artists, total) = tokio::try_join!(
-        queries::artists::search(&state.pool, q, limit, offset),
+        queries::artists::search(&state.pool, q, &order_by, limit, offset),
         queries::artists::search_count(&state.pool, q),
     )?;
 

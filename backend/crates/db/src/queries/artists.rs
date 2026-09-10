@@ -36,49 +36,44 @@ pub async fn count(executor: impl Executor<'_, Database = MySql>) -> Result<u64>
         .map_err(DbError::from)
 }
 
-/// Returns a page of artists ordered by name.
-pub async fn list(
-    executor: impl Executor<'_, Database = MySql>,
-    limit: u32,
-    offset: u32,
-) -> Result<Vec<Artist>> {
-    sqlx::query_as::<_, Artist>(
-        "SELECT id, name, description, \
-         (SELECT COUNT(*) FROM song_original_artists WHERE artist_id = a.id) AS song_count \
-         FROM artists a ORDER BY name LIMIT ? OFFSET ?",
-    )
-    .bind(limit)
-    .bind(offset)
-    .fetch_all(executor)
-    .await
-    .map_err(DbError::from)
-}
-
-/// Returns artists matching an optional name query, ordered by name.
+/// Returns artists matching an optional name query, with the given sort order.
 ///
-/// When `q` is `Some`, results are filtered by a case-insensitive substring match
-/// against the artist name. Falls through to [`list`] when `q` is `None`.
+/// When `q` is `None`, all artists are returned. When `q` is `Some`, results are
+/// filtered by a case-insensitive substring match against the artist name.
 pub async fn search(
     executor: impl Executor<'_, Database = MySql>,
     q: Option<&str>,
+    order_by: &str,
     limit: u32,
     offset: u32,
 ) -> Result<Vec<Artist>> {
-    let Some(q) = q else {
-        return list(executor, limit, offset).await;
+    let sql = if q.is_some() {
+        format!(
+            "SELECT id, name, description, \
+             (SELECT COUNT(*) FROM song_original_artists WHERE artist_id = a.id) AS song_count \
+             FROM artists a WHERE name LIKE ? ORDER BY {order_by} LIMIT ? OFFSET ?"
+        )
+    } else {
+        format!(
+            "SELECT id, name, description, \
+             (SELECT COUNT(*) FROM song_original_artists WHERE artist_id = a.id) AS song_count \
+             FROM artists a ORDER BY {order_by} LIMIT ? OFFSET ?"
+        )
     };
-    let pattern = format!("%{q}%");
-    sqlx::query_as::<_, Artist>(
-        "SELECT id, name, description, \
-         (SELECT COUNT(*) FROM song_original_artists WHERE artist_id = a.id) AS song_count \
-         FROM artists a WHERE name LIKE ? ORDER BY name LIMIT ? OFFSET ?",
-    )
-    .bind(&pattern)
-    .bind(limit)
-    .bind(offset)
-    .fetch_all(executor)
-    .await
-    .map_err(DbError::from)
+
+    let query = sqlx::query_as::<_, Artist>(sqlx::AssertSqlSafe(sql.as_str()));
+    let query = if let Some(pattern) = q.map(|q| format!("%{q}%")) {
+        query.bind(pattern)
+    } else {
+        query
+    };
+
+    query
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(executor)
+        .await
+        .map_err(DbError::from)
 }
 
 /// Returns the total number of artists matching the optional name query.
