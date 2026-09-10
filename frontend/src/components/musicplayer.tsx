@@ -1,6 +1,7 @@
 import {
   ShuffleIcon,
   MusicNotesPlusIcon,
+  PauseIcon,
   PlayIcon,
   RepeatIcon,
   SkipBackIcon,
@@ -12,14 +13,28 @@ import {
   CornersOutIcon,
 } from "@phosphor-icons/react";
 
+import { usePlayerStore } from "@/store/player";
+
 export function MusicPlayer() {
+  const current = usePlayerStore((s) => s.current);
+  const isPlaying = usePlayerStore((s) => s.isPlaying);
+  const pause = usePlayerStore((s) => s.pause);
+  const resume = usePlayerStore((s) => s.resume);
+  const volume = usePlayerStore((s) => s.volume);
+  const setVolume = usePlayerStore((s) => s.setVolume);
+
+  if (!current) return null;
+
+  const title = current.title ?? "No title";
+  const artists = current.singers.map((s) => s.name).join(", ") || "Unknown artist";
+
   return (
     <div id="music-player" className="player-bar">
       <div id="song-info" className="flex min-w-0 items-center gap-4 pl-2">
         <div className="player-thumbnail" />
         <div className="min-w-0">
-          <p className="player-title">Song Title</p>
-          <p className="player-artist">Artist</p>
+          <p className="player-title">{title}</p>
+          <p className="player-artist">{artists}</p>
         </div>
         <button type="button" className="player-btn-sm" aria-label="Add to favorite">
           <MusicNotesPlusIcon size={20} />
@@ -36,8 +51,17 @@ export function MusicPlayer() {
             <SkipBackIcon size={18} weight="fill" />
           </button>
 
-          <button type="button" className="player-btn-play" aria-label="Play">
-            <PlayIcon size={22} weight="fill" />
+          <button
+            type="button"
+            className="player-btn-play"
+            aria-label={isPlaying ? "Pause" : "Play"}
+            onClick={isPlaying ? pause : resume}
+          >
+            {isPlaying ? (
+              <PauseIcon size={22} weight="fill" />
+            ) : (
+              <PlayIcon size={22} weight="fill" />
+            )}
           </button>
 
           <button type="button" className="player-btn" aria-label="Next">
@@ -53,7 +77,7 @@ export function MusicPlayer() {
           <span className="w-10 text-right player-time">0:00</span>
 
           <input type="range" min="0" max="100" defaultValue="0" className="player-range" />
-          <span className="w-10 player-time">6:70</span>
+          <span className="w-10 player-time">0:00</span>
         </div>
       </div>
 
@@ -75,7 +99,15 @@ export function MusicPlayer() {
             <SpeakerHighIcon size={20} />
           </button>
 
-          <input type="range" min="0" max="100" defaultValue="70" className="player-volume-range" />
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            value={volume}
+            onChange={(e) => setVolume(e.target.valueAsNumber)}
+            className="player-volume-range"
+          />
         </div>
 
         <button type="button" className="player-btn" aria-label="Fullscreen">
