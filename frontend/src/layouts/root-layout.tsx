@@ -3,10 +3,10 @@ import { useState } from "react";
 import { Outlet } from "react-router";
 
 import { authApi } from "@/api/auth";
-import { MusicPlayer } from "@/components/musicplayer/musicplayer";
+import { MusicPlayer } from "@/components/musicplayer";
 import { useAuthStore } from "@/store/auth";
 
-import { HeaderMobile } from "./header-mobile/header-mobile";
+import { HeaderMobile } from "./header-mobile";
 import { Sidebar } from "./sidebar/sidebar";
 
 export function RootLayout() {
