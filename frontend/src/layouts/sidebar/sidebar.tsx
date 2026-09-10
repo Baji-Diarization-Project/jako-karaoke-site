@@ -1,7 +1,7 @@
 import { XIcon } from "@phosphor-icons/react";
 
 import logoUrl from "@/assets/Baji.factions.Industry.svg";
-import { AuthDialog } from "@/components/auth/auth-dialog";
+import { AuthDialog } from "@/features/auth";
 import { useAuthStore } from "@/store/auth";
 
 import { NavItem } from "./nav-item";

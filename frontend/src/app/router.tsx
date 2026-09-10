@@ -1,10 +1,10 @@
 import { createBrowserRouter } from "react-router";
 
+import { AdminPage } from "@/features/admin";
+import { ArtistsPage } from "@/features/artists";
+import { HomePage } from "@/features/home";
+import { SearchPage } from "@/features/search";
 import { RootLayout } from "@/layouts/root-layout";
-import { AdminPage } from "@/pages/admin";
-import { ArtistsPage } from "@/pages/artists";
-import { HomePage } from "@/pages/home";
-import { SearchPage } from "@/pages/search";
 
 export const router = createBrowserRouter([
   {

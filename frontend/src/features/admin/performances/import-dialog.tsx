@@ -7,7 +7,8 @@ import { performancesApi, type PerformanceTagKind } from "@/api/performances";
 import { songsApi } from "@/api/songs";
 import { tagsApi } from "@/api/tags";
 import { performanceKeys } from "@/hooks/api/performances";
-import { parseImportCsv, type ParsedPerformanceImportRow } from "@/lib/parse-import-csv";
+
+import { parseImportCsv, type ParsedPerformanceImportRow } from "./parse-import-csv";
 
 interface ResolvedRow {
   row: ParsedPerformanceImportRow;

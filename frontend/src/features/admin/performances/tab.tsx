@@ -5,8 +5,8 @@ import { usePerformances } from "@/hooks/api/performances";
 import { useDebounced } from "@/hooks/use-debounced";
 import { formatDate } from "@/lib/format";
 
-import { ImportPerformancesDialog } from "./import-performances-dialog";
-import { PerformanceDetailPanel } from "./performance-detail";
+import { PerformanceDetailPanel } from "./detail";
+import { ImportPerformancesDialog } from "./import-dialog";
 
 export function PerformancesAdminTab() {
   const [searchInput, setSearchInput] = useState("");

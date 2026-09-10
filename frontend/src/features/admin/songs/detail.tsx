@@ -17,9 +17,9 @@ import { songKeys, useSong } from "@/hooks/api/songs";
 import { tagKeys, useTags } from "@/hooks/api/tags";
 import { applyAll } from "@/lib/staging";
 
-import { ImageEditSection } from "./image-edit-section";
-import { ItemPicker, TagPicker, type TagAssignment } from "./pickers";
-import { resolveTagAssignments } from "./tag-utils";
+import { ImageEditSection } from "../shared/image-edit-section";
+import { ItemPicker, TagPicker, type TagAssignment } from "../shared/pickers";
+import { resolveTagAssignments } from "../shared/tag-utils";
 
 export function SongDetailPanel({
   song,

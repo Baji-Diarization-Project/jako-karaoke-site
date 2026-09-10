@@ -2,9 +2,10 @@ import { MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
 
-import { PerformanceRow } from "@/components/search/performance-row";
 import { usePerformances } from "@/hooks/api/performances";
 import { useDebounced } from "@/hooks/use-debounced";
+
+import { PerformanceRow } from "./performance-row";
 
 type SortField = "performance_date" | "play_count" | "duration";
 

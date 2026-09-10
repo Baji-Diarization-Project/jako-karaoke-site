@@ -3,11 +3,11 @@ import { useNavigate } from "react-router";
 
 import { useAuthStore } from "@/store/auth";
 
-import { ArtistsAdminTab } from "./admin/artists";
-import { PerformancesAdminTab } from "./admin/performances";
-import { SongsAdminTab } from "./admin/songs";
-import { TagsAdminTab } from "./admin/tags";
-import { UsersAdminTab } from "./admin/users";
+import { ArtistsAdminTab } from "./artists/tab";
+import { PerformancesAdminTab } from "./performances/tab";
+import { SongsAdminTab } from "./songs/tab";
+import { TagsAdminTab } from "./tags/tab";
+import { UsersAdminTab } from "./users/tab";
 
 type AdminTab = "users" | "performances" | "songs" | "artists" | "tags";
 
