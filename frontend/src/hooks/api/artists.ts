@@ -1,15 +1,15 @@
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 
 import { artistsApi } from "@/api/artists";
-import type { SearchPaginationParams } from "@/api/types";
+import type { ArtistListParams } from "@/api/artists";
 
 export const artistKeys = {
   all: () => ["artists"] as const,
-  list: (params?: SearchPaginationParams) => ["artists", "list", params] as const,
+  list: (params?: ArtistListParams) => ["artists", "list", params] as const,
   detail: (id: string) => ["artists", "detail", id] as const,
 };
 
-export function useArtists(params?: SearchPaginationParams, enabled = true) {
+export function useArtists(params?: ArtistListParams, enabled = true) {
   return useQuery({
     queryKey: artistKeys.list(params),
     queryFn: async () => {
@@ -18,6 +18,29 @@ export function useArtists(params?: SearchPaginationParams, enabled = true) {
       return data;
     },
     enabled,
+  });
+}
+
+/** Infinite scroll query for the artists list. Appends pages as the user scrolls. */
+export function useInfiniteArtists(params?: Omit<ArtistListParams, "page" | "per_page">) {
+  const ARTISTS_PER_PAGE = 24;
+
+  return useInfiniteQuery({
+    queryKey: ["artists", "infinite", params],
+    queryFn: async ({ pageParam }) => {
+      const { data, error } = await artistsApi.list({
+        ...params,
+        page: pageParam,
+        per_page: ARTISTS_PER_PAGE,
+      });
+      if (error) throw error;
+      return data;
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, allPages) => {
+      const fetched = allPages.length * ARTISTS_PER_PAGE;
+      return fetched < lastPage.total ? allPages.length + 1 : undefined;
+    },
   });
 }
 
