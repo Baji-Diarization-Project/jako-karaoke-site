@@ -1,0 +1,1 @@
+export { ArtistsPage } from "./page";

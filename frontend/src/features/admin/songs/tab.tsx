@@ -4,7 +4,7 @@ import { type SongSummary } from "@/api/songs";
 import { useSongs } from "@/hooks/api/songs";
 import { useDebounced } from "@/hooks/use-debounced";
 
-import { SongDetailPanel } from "./song-detail";
+import { SongDetailPanel } from "./detail";
 
 export function SongsAdminTab() {
   const [searchInput, setSearchInput] = useState("");

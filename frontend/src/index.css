@@ -6,6 +6,8 @@
 @import "./styles/forms.css";
 @import "./styles/sidebar.css";
 @import "./styles/search.css";
+@import "./styles/header-mobile.css";
+@import "./styles/player.css";
 
 :root {
   color-scheme: light;
@@ -40,6 +42,16 @@
   --color-sidebar-border: #525252;
   --color-sidebar-item-hover: rgba(255, 255, 255, 0.08);
   --color-sidebar-item-active: rgba(255, 255, 255, 0.2);
+
+  --color-player: #171717;
+  --color-player-fg: #ffffff;
+  --color-player-fg-muted: rgba(255, 255, 255, 0.6);
+  --color-player-fg-dim: rgba(255, 255, 255, 0.4);
+  --color-player-btn-fg: rgba(255, 255, 255, 0.7);
+  --color-player-thumbnail-bg: #262626;
+  --color-player-play-bg: #404040;
+  --color-player-play-bg-hover: #737373;
+  --color-player-accent: #e5e5e5;
 
   --spacing-sidebar: 20rem;
 }

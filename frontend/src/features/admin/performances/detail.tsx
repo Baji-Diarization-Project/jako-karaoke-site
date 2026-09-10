@@ -23,8 +23,8 @@ import { tagKeys, useTags } from "@/hooks/api/tags";
 import { formatDate, formatStreamTime, parseStreamTime } from "@/lib/format";
 import { applyAll } from "@/lib/staging";
 
-import { ItemPicker, TagPicker, type TagAssignment } from "./pickers";
-import { resolveTagAssignments } from "./tag-utils";
+import { ItemPicker, TagPicker, type TagAssignment } from "../shared/pickers";
+import { resolveTagAssignments } from "../shared/tag-utils";
 
 export function PerformanceDetailPanel({
   performance,

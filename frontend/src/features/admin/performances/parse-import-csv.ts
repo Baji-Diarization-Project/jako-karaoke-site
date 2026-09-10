@@ -1,4 +1,4 @@
-import { parseStreamTime } from "./format";
+import { parseStreamTime } from "@/lib/format";
 
 type PerformanceTagKind = "instrument" | "modifier" | "misc";
 

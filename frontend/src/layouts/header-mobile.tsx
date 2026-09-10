@@ -8,15 +8,12 @@ type HeaderMobileProps = {
 
 export function HeaderMobile({ onOpenSidebar }: HeaderMobileProps) {
   return (
-    <header
-      id="header-mobile"
-      className="flex h-16 shrink-0 items-center bg-neutral-900 px-4 text-white md:hidden"
-    >
+    <header id="header-mobile" className="header-mobile md:hidden">
       <div>
         <button
           onClick={onOpenSidebar}
           type="button"
-          className="flex h-10 w-10 cursor-pointer items-center justify-center"
+          className="header-mobile-btn"
           aria-label="Open Navigation"
         >
           <ListIcon size={28} />
@@ -24,7 +21,7 @@ export function HeaderMobile({ onOpenSidebar }: HeaderMobileProps) {
       </div>
 
       <div className="flex flex-1 justify-center">
-        <img src={logoUrl} alt="" className="h-10 w-10" />
+        <img src={logoUrl} alt="" className="size-10" />
       </div>
     </header>
   );

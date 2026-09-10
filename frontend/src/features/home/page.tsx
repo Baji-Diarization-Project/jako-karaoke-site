@@ -1,4 +1,4 @@
-import { UsernameClaim } from "@/components/auth/username-claim";
+import { UsernameClaim } from "@/features/auth";
 
 export function HomePage() {
   return (

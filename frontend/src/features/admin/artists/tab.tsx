@@ -4,7 +4,7 @@ import { type ArtistSummary } from "@/api/artists";
 import { useArtists } from "@/hooks/api/artists";
 import { useDebounced } from "@/hooks/use-debounced";
 
-import { ArtistDetailPanel } from "./artist-detail";
+import { ArtistDetailPanel } from "./detail";
 
 export function ArtistsAdminTab() {
   const [searchInput, setSearchInput] = useState("");
