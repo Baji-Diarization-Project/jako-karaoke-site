@@ -1,0 +1,18 @@
+@utility header-mobile {
+  display: flex;
+  height: 4rem;
+  flex-shrink: 0;
+  align-items: center;
+  background-color: var(--color-player);
+  color: var(--color-player-fg);
+  padding-inline: 1rem;
+}
+
+@utility header-mobile-btn {
+  display: flex;
+  height: 2.5rem;
+  width: 2.5rem;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+}

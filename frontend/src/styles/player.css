@@ -1,0 +1,104 @@
+@utility player-bar {
+  display: grid;
+  height: 6rem;
+  grid-template-columns: 280px 1fr 320px;
+  align-items: center;
+  background-color: var(--color-player);
+  color: var(--color-player-fg);
+  padding-inline: 1rem;
+}
+
+@utility player-thumbnail {
+  height: 4rem;
+  width: 4rem;
+  flex-shrink: 0;
+  background-color: var(--color-player-thumbnail-bg);
+}
+
+@utility player-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+@utility player-artist {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.75rem;
+  color: var(--color-player-fg-muted);
+}
+
+@utility player-btn {
+  display: flex;
+  height: 2.25rem;
+  width: 2.25rem;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-player-btn-fg);
+  &:hover {
+    color: var(--color-player-fg);
+  }
+}
+
+@utility player-btn-sm {
+  display: flex;
+  height: 2rem;
+  width: 2rem;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-player-btn-fg);
+  &:hover {
+    color: var(--color-player-fg);
+  }
+}
+
+@utility player-btn-play {
+  display: flex;
+  height: 3rem;
+  width: 3rem;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background-color: var(--color-player-play-bg);
+  &:hover {
+    background-color: var(--color-player-play-bg-hover);
+  }
+}
+
+@utility player-col {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+@utility player-volume-control {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+@utility player-time {
+  font-size: 0.75rem;
+  color: var(--color-player-fg-dim);
+}
+
+@utility player-range {
+  min-width: 0;
+  flex: 1;
+  cursor: pointer;
+  accent-color: var(--color-player-accent);
+}
+
+@utility player-volume-range {
+  width: 6rem;
+  cursor: pointer;
+  accent-color: var(--color-player-accent);
+}

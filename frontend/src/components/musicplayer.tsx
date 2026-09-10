@@ -14,110 +14,71 @@ import {
 
 export function MusicPlayer() {
   return (
-    <div
-      id="music-player"
-      className="grid h-24 grid-cols-[280px_1fr_320px] items-center bg-neutral-900 px-4 text-white"
-    >
+    <div id="music-player" className="player-bar">
       <div id="song-info" className="flex min-w-0 items-center gap-4 pl-2">
-        <div className="h-16 w-16 shrink-0 bg-neutral-800" />
+        <div className="player-thumbnail" />
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold">Song Title</p>
-          <p className="truncate text-xs text-white/60">Artist</p>
+          <p className="player-title">Song Title</p>
+          <p className="player-artist">Artist</p>
         </div>
-        <button
-          type="button"
-          className="flex h-8 w-8 cursor-pointer items-center justify-center text-white/70 hover:text-white"
-          aria-label="Add to favorite"
-        >
+        <button type="button" className="player-btn-sm" aria-label="Add to favorite">
           <MusicNotesPlusIcon size={20} />
         </button>
       </div>
 
-      <div className="flex min-w-0 flex-col items-center gap-2">
+      <div className="player-col">
         <div id="playback-control" className="flex items-center gap-4">
-          <button className="hidden h-9 w-9 cursor-pointer items-center justify-center text-white/70 hover:text-white md:flex">
-            <ShuffleIcon size={18} aria-label="Shuffle" />
+          <button type="button" className="player-btn hidden md:flex" aria-label="Shuffle">
+            <ShuffleIcon size={18} />
           </button>
 
-          <button className="flex h-9 w-9 cursor-pointer items-center justify-center text-white/70 hover:text-white">
-            <SkipBackIcon size={18} weight="fill" aria-label="Previous" />
+          <button type="button" className="player-btn" aria-label="Previous">
+            <SkipBackIcon size={18} weight="fill" />
           </button>
 
-          <button className="flex h-12 w-12 cursor-pointer items-center justify-center rounded-full bg-neutral-700 hover:bg-neutral-500">
-            <PlayIcon size={22} weight="fill" aria-label="Play" />
+          <button type="button" className="player-btn-play" aria-label="Play">
+            <PlayIcon size={22} weight="fill" />
           </button>
 
-          <button className="flex h-9 w-9 cursor-pointer items-center justify-center text-white/70 hover:text-white">
-            <SkipForwardIcon size={18} weight="fill" aria-label="Next" />
+          <button type="button" className="player-btn" aria-label="Next">
+            <SkipForwardIcon size={18} weight="fill" />
           </button>
 
-          <button className="hidden h-9 w-9 cursor-pointer items-center justify-center text-white/70 hover:text-white md:flex">
-            <RepeatIcon size={18} aria-label="Repeat" />
+          <button type="button" className="player-btn hidden md:flex" aria-label="Repeat">
+            <RepeatIcon size={18} />
           </button>
         </div>
 
         <div id="progress-control" className="hidden w-full max-w-xl items-center gap-3 lg:flex">
-          <span className="w-10 text-right text-xs text-white/40">0:00</span>
+          <span className="w-10 text-right player-time">0:00</span>
 
-          <input
-            type="range"
-            min="0"
-            max="100"
-            defaultValue="0"
-            className="min-w-0 flex-1 cursor-pointer accent-neutral-200"
-          />
-          <span className="w-10 text-xs text-white/40">6:70</span>
+          <input type="range" min="0" max="100" defaultValue="0" className="player-range" />
+          <span className="w-10 player-time">6:70</span>
         </div>
       </div>
 
       <div id="button-controls" className="hidden items-center justify-end gap-1 lg:flex">
-        <button
-          type="button"
-          className="flex h-9 w-9 cursor-pointer items-center justify-center text-white/70 hover:text-white"
-          aria-label="Sleep timer"
-        >
+        <button type="button" className="player-btn" aria-label="Sleep timer">
           <ClockCountdownIcon size={20} />
         </button>
 
-        <button
-          type="button"
-          className="flex h-9 w-9 cursor-pointer items-center justify-center text-white/70 hover:text-white"
-          aria-label="Song info"
-        >
+        <button type="button" className="player-btn" aria-label="Song info">
           <InfoIcon size={20} />
         </button>
 
-        <button
-          type="button"
-          className="flex h-9 w-9 cursor-pointer items-center justify-center text-white/70 hover:text-white"
-          aria-label="Queue"
-        >
+        <button type="button" className="player-btn" aria-label="Queue">
           <QueueIcon size={20} />
         </button>
 
-        <div id="volume-control" className="flex items-center gap-2">
-          <button
-            type="button"
-            className="hidden h-9 w-9 cursor-pointer items-center justify-center text-white/70 hover:text-white lg:flex"
-            aria-label="Volume"
-          >
+        <div id="volume-control" className="player-volume-control">
+          <button type="button" className="player-btn hidden lg:flex" aria-label="Volume">
             <SpeakerHighIcon size={20} />
           </button>
 
-          <input
-            type="range"
-            min="0"
-            max="100"
-            defaultValue="70"
-            className="w-24 cursor-pointer accent-neutral-200"
-          />
+          <input type="range" min="0" max="100" defaultValue="70" className="player-volume-range" />
         </div>
 
-        <button
-          type="button"
-          className="flex h-9 w-9 cursor-pointer items-center justify-center text-white/70 hover:text-white"
-          aria-label="Fullscreen"
-        >
+        <button type="button" className="player-btn" aria-label="Fullscreen">
           <CornersOutIcon size={20} />
         </button>
       </div>
