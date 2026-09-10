@@ -5,6 +5,7 @@ import { useSearchParams } from "react-router";
 import type { ArtistSortField } from "@/api/artists";
 import { useInfiniteArtists } from "@/hooks/api/artists";
 import { useDebounced } from "@/hooks/use-debounced";
+import { createStateCodec } from "@/lib/url-state";
 
 import { ArtistCard } from "./artist-card";
 
@@ -27,48 +28,26 @@ const SORT_OPTIONS: { value: SortOption; label: string; params: Partial<ArtistSt
   { value: "song_count-asc", label: "Fewest songs", params: { sort: "song_count" } },
 ];
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
-function encodeArtistState(state: ArtistState): string {
-  return btoa(JSON.stringify(state)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
-function decodeArtistState(encoded: string): ArtistState {
-  if (!encoded) return {};
-  try {
-    const padded = encoded.replace(/-/g, "+").replace(/_/g, "/");
-    const remainder = padded.length % 4;
-    const normalized = remainder > 0 ? padded + "=".repeat(4 - remainder) : padded;
-    const parsed: unknown = JSON.parse(atob(normalized));
-    if (!isRecord(parsed)) return {};
+const artistStateCodec = createStateCodec<ArtistState>({
+  compact: (state) => {
+    const compact: ArtistState = {};
+    if (state.q) compact.q = state.q;
+    if (state.sort && state.sort !== "name") compact.sort = state.sort;
+    if (state.sort_dir && state.sort_dir !== "asc") compact.sort_dir = state.sort_dir;
+    return compact;
+  },
+  validate: (parsed) => {
     const state: ArtistState = {};
     if (typeof parsed.q === "string" && parsed.q) state.q = parsed.q;
     if (parsed.sort === "name" || parsed.sort === "song_count") state.sort = parsed.sort;
     if (parsed.sort_dir === "asc" || parsed.sort_dir === "desc") state.sort_dir = parsed.sort_dir;
     return state;
-  } catch {
-    return {};
-  }
-}
-
-function compactState(state: ArtistState): ArtistState {
-  const compact: ArtistState = {};
-  if (state.q) compact.q = state.q;
-  if (state.sort && state.sort !== "name") compact.sort = state.sort;
-  if (state.sort_dir && state.sort_dir !== "asc") compact.sort_dir = state.sort_dir;
-  return compact;
-}
-
-function stateToParam(state: ArtistState): string | null {
-  const compact = compactState(state);
-  return Object.keys(compact).length > 0 ? encodeArtistState(compact) : null;
-}
+  },
+});
 
 export function ArtistsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const artistState = decodeArtistState(searchParams.get("query") ?? "");
+  const artistState = artistStateCodec.decode(searchParams.get("query") ?? "");
 
   const q = artistState.q ?? "";
   const sort = artistState.sort ?? "name";
@@ -87,8 +66,11 @@ export function ArtistsPage() {
   useEffect(() => {
     setSearchParams(
       (prev) => {
-        const current = decodeArtistState(prev.get("query") ?? "");
-        const next = stateToParam({ ...current, q: debouncedInput.trim() || undefined });
+        const current = artistStateCodec.decode(prev.get("query") ?? "");
+        const next = artistStateCodec.toParam({
+          ...current,
+          q: debouncedInput.trim() || undefined,
+        });
         const params = new URLSearchParams(prev);
         if (next) {
           params.set("query", next);
@@ -103,8 +85,8 @@ export function ArtistsPage() {
 
   function updateSearch(partial: Partial<ArtistState>) {
     setSearchParams((prev) => {
-      const current = decodeArtistState(prev.get("query") ?? "");
-      const next = stateToParam({ ...current, ...partial });
+      const current = artistStateCodec.decode(prev.get("query") ?? "");
+      const next = artistStateCodec.toParam({ ...current, ...partial });
       const params = new URLSearchParams(prev);
       if (next) {
         params.set("query", next);
