@@ -95,6 +95,7 @@ pub struct ArtistSummary {
     pub name: String,
     pub description: Option<String>,
     pub images: Vec<ArtistImageInfo>,
+    pub song_count: u64,
 }
 
 /// A full artist record returned by detail and mutation endpoints.

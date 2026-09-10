@@ -3606,7 +3606,8 @@
         "required": [
           "id",
           "name",
-          "images"
+          "images",
+          "song_count"
         ],
         "properties": {
           "description": {
@@ -3627,6 +3628,11 @@
           },
           "name": {
             "type": "string"
+          },
+          "song_count": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
           }
         }
       },
@@ -3972,7 +3978,8 @@
               "required": [
                 "id",
                 "name",
-                "images"
+                "images",
+                "song_count"
               ],
               "properties": {
                 "description": {
@@ -3993,6 +4000,11 @@
                 },
                 "name": {
                   "type": "string"
+                },
+                "song_count": {
+                  "type": "integer",
+                  "format": "int64",
+                  "minimum": 0
                 }
               }
             }

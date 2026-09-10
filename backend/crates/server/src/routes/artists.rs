@@ -160,6 +160,7 @@ pub(crate) async fn list_artists(
                 name: a.name,
                 description: a.description,
                 images,
+                song_count: a.song_count as u64,
             }
         })
         .collect();

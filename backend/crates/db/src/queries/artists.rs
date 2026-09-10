@@ -16,11 +16,15 @@ pub async fn get_by_id(
     executor: impl Executor<'_, Database = MySql>,
     id: Uuid,
 ) -> Result<Option<Artist>> {
-    sqlx::query_as::<_, Artist>("SELECT id, name, description FROM artists WHERE id = ?")
-        .bind(id)
-        .fetch_optional(executor)
-        .await
-        .map_err(DbError::from)
+    sqlx::query_as::<_, Artist>(
+        "SELECT id, name, description, \
+         (SELECT COUNT(*) FROM song_original_artists WHERE artist_id = a.id) AS song_count \
+         FROM artists a WHERE id = ?",
+    )
+    .bind(id)
+    .fetch_optional(executor)
+    .await
+    .map_err(DbError::from)
 }
 
 /// Returns the total number of artists.
@@ -39,7 +43,9 @@ pub async fn list(
     offset: u32,
 ) -> Result<Vec<Artist>> {
     sqlx::query_as::<_, Artist>(
-        "SELECT id, name, description FROM artists ORDER BY name LIMIT ? OFFSET ?",
+        "SELECT id, name, description, \
+         (SELECT COUNT(*) FROM song_original_artists WHERE artist_id = a.id) AS song_count \
+         FROM artists a ORDER BY name LIMIT ? OFFSET ?",
     )
     .bind(limit)
     .bind(offset)
@@ -63,7 +69,9 @@ pub async fn search(
     };
     let pattern = format!("%{q}%");
     sqlx::query_as::<_, Artist>(
-        "SELECT id, name, description FROM artists WHERE name LIKE ? ORDER BY name LIMIT ? OFFSET ?",
+        "SELECT id, name, description, \
+         (SELECT COUNT(*) FROM song_original_artists WHERE artist_id = a.id) AS song_count \
+         FROM artists a WHERE name LIKE ? ORDER BY name LIMIT ? OFFSET ?",
     )
     .bind(&pattern)
     .bind(limit)
@@ -94,7 +102,7 @@ pub async fn search_count(
 pub async fn create(conn: &mut MySqlConnection, new: &NewArtist) -> Result<Artist> {
     sqlx::query_as::<_, Artist>(
         "INSERT INTO artists (name, description) VALUES (?, ?) \
-         RETURNING id, name, description",
+         RETURNING id, name, description, 0 AS song_count",
     )
     .bind(&new.name)
     .bind(&new.description)
