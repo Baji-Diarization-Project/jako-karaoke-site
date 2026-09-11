@@ -382,6 +382,7 @@ pub async fn get_singers_batch(
                 id: row.id,
                 name: row.name,
                 description: row.description,
+                song_count: 0,
             });
     }
     Ok(by_performance)

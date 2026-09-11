@@ -9,6 +9,7 @@ pub struct Artist {
     pub id: Uuid,
     pub name: String,
     pub description: Option<String>,
+    pub song_count: i64,
 }
 
 /// Input for creating a new artist.

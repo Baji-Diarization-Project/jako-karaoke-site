@@ -42,16 +42,34 @@
           {
             "name": "q",
             "in": "query",
-            "description": "Optional text search filter.",
+            "description": "Text search by artist name.",
             "required": false,
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "description": "Field to sort by. Defaults to `name`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/ArtistSort"
+            }
+          },
+          {
+            "name": "sort_dir",
+            "in": "query",
+            "description": "Sort direction. Defaults to `asc`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/SortDir"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "Paginated list of artists ordered by name",
+            "description": "Paginated list of artists",
             "content": {
               "application/json": {
                 "schema": {
@@ -3600,13 +3618,22 @@
           }
         }
       },
+      "ArtistSort": {
+        "type": "string",
+        "description": "Field to sort artists by in list endpoints.",
+        "enum": [
+          "name",
+          "song_count"
+        ]
+      },
       "ArtistSummary": {
         "type": "object",
         "description": "A lean artist record returned by the list endpoint.",
         "required": [
           "id",
           "name",
-          "images"
+          "images",
+          "song_count"
         ],
         "properties": {
           "description": {
@@ -3627,6 +3654,11 @@
           },
           "name": {
             "type": "string"
+          },
+          "song_count": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
           }
         }
       },
@@ -3972,7 +4004,8 @@
               "required": [
                 "id",
                 "name",
-                "images"
+                "images",
+                "song_count"
               ],
               "properties": {
                 "description": {
@@ -3993,6 +4026,11 @@
                 },
                 "name": {
                   "type": "string"
+                },
+                "song_count": {
+                  "type": "integer",
+                  "format": "int64",
+                  "minimum": 0
                 }
               }
             }

@@ -2,12 +2,12 @@ import { MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
 
+import type { PerformanceSortField } from "@/api/performances";
 import { usePerformances } from "@/hooks/api/performances";
 import { useDebounced } from "@/hooks/use-debounced";
+import { createStateCodec } from "@/lib/url-state";
 
 import { PerformanceRow } from "./performance-row";
-
-type SortField = "performance_date" | "play_count" | "duration";
 
 /**
  * All active search and filter parameters, stored as a single ?query= URL param.
@@ -15,36 +15,23 @@ type SortField = "performance_date" | "play_count" | "duration";
  */
 interface SearchState {
   q?: string;
-  sort?: SortField;
+  sort?: PerformanceSortField;
   sort_dir?: "asc" | "desc";
   page?: number;
   per_page?: number;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
-/**
- * Serializes state to URL-safe base64 (RFC 4648 §5), substituting + and / so the
- * result can appear in a query string without percent-encoding.
- */
-function encodeSearchState(state: SearchState): string {
-  return btoa(JSON.stringify(state)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
-/**
- * Deserializes and validates a ?query= value. Fields are checked individually so a
- * corrupted or manually edited URL degrades gracefully to defaults rather than throwing.
- */
-function decodeSearchState(encoded: string): SearchState {
-  if (!encoded) return {};
-  try {
-    const padded = encoded.replace(/-/g, "+").replace(/_/g, "/");
-    const remainder = padded.length % 4;
-    const normalized = remainder > 0 ? padded + "=".repeat(4 - remainder) : padded;
-    const parsed: unknown = JSON.parse(atob(normalized));
-    if (!isRecord(parsed)) return {};
+const searchStateCodec = createStateCodec<SearchState>({
+  compact: (state) => {
+    const compact: SearchState = {};
+    if (state.q) compact.q = state.q;
+    if (state.sort && state.sort !== "performance_date") compact.sort = state.sort;
+    if (state.sort_dir && state.sort_dir !== "desc") compact.sort_dir = state.sort_dir;
+    if (state.page && state.page > 1) compact.page = state.page;
+    if (state.per_page && state.per_page !== 20) compact.per_page = state.per_page;
+    return compact;
+  },
+  validate: (parsed) => {
     const state: SearchState = {};
     if (typeof parsed.q === "string" && parsed.q) state.q = parsed.q;
     if (
@@ -57,30 +44,12 @@ function decodeSearchState(encoded: string): SearchState {
     if (typeof parsed.page === "number" && parsed.page >= 1) state.page = Math.floor(parsed.page);
     if (parsed.per_page === 50 || parsed.per_page === 100) state.per_page = parsed.per_page;
     return state;
-  } catch {
-    return {};
-  }
-}
-
-/** Omits fields that match their defaults so the encoded blob stays short. */
-function compactState(state: SearchState): SearchState {
-  const compact: SearchState = {};
-  if (state.q) compact.q = state.q;
-  if (state.sort && state.sort !== "performance_date") compact.sort = state.sort;
-  if (state.sort_dir && state.sort_dir !== "desc") compact.sort_dir = state.sort_dir;
-  if (state.page && state.page > 1) compact.page = state.page;
-  if (state.per_page && state.per_page !== 20) compact.per_page = state.per_page;
-  return compact;
-}
-
-function stateToParam(state: SearchState): string | null {
-  const compact = compactState(state);
-  return Object.keys(compact).length > 0 ? encodeSearchState(compact) : null;
-}
+  },
+});
 
 export function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const searchState = decodeSearchState(searchParams.get("query") ?? "");
+  const searchState = searchStateCodec.decode(searchParams.get("query") ?? "");
 
   const q = searchState.q ?? "";
   const sort = searchState.sort ?? "performance_date";
@@ -100,8 +69,8 @@ export function SearchPage() {
   useEffect(() => {
     setSearchParams(
       (prev) => {
-        const current = decodeSearchState(prev.get("query") ?? "");
-        const next = stateToParam({
+        const current = searchStateCodec.decode(prev.get("query") ?? "");
+        const next = searchStateCodec.toParam({
           ...current,
           q: debouncedInput.trim() || undefined,
           page: undefined,
@@ -120,8 +89,8 @@ export function SearchPage() {
 
   function updateSearch(partial: Partial<SearchState>) {
     setSearchParams((prev) => {
-      const current = decodeSearchState(prev.get("query") ?? "");
-      const next = stateToParam({ ...current, ...partial });
+      const current = searchStateCodec.decode(prev.get("query") ?? "");
+      const next = searchStateCodec.toParam({ ...current, ...partial });
       const params = new URLSearchParams(prev);
       if (next) {
         params.set("query", next);
@@ -140,7 +109,7 @@ export function SearchPage() {
     sort_dir: sortDir,
   });
 
-  function handleSortChange(field: SortField) {
+  function handleSortChange(field: PerformanceSortField) {
     if (sort === field) {
       updateSearch({ sort_dir: sortDir === "desc" ? "asc" : "desc", page: undefined });
     } else {
@@ -280,10 +249,10 @@ export function SearchPage() {
 
 interface SortHeaderProps {
   label: string;
-  field: SortField;
-  sort: SortField;
+  field: PerformanceSortField;
+  sort: PerformanceSortField;
   sortDir: "asc" | "desc";
-  onSort: (field: SortField) => void;
+  onSort: (field: PerformanceSortField) => void;
 }
 
 function SortHeader({ label, field, sort, sortDir, onSort }: SortHeaderProps) {

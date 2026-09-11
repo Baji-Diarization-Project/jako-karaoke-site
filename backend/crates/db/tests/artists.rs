@@ -56,7 +56,7 @@ async fn list_ordered_by_name(pool: MySqlPool) {
         .await
         .unwrap();
 
-    let results = artists::list(&pool, 10, 0).await.unwrap();
+    let results = artists::search(&pool, None, "name", 10, 0).await.unwrap();
     let names: Vec<&str> = results.iter().map(|a| a.name.as_str()).collect();
     assert_eq!(names, vec!["name_a", "name_b", "name_c"]);
 }

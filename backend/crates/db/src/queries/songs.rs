@@ -235,6 +235,7 @@ pub async fn get_original_artists_batch(
             id: row.id,
             name: row.name,
             description: row.description,
+            song_count: 0,
         });
     }
     Ok(by_song)

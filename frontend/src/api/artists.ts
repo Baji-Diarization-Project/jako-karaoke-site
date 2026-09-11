@@ -2,6 +2,17 @@ import { api } from "./client";
 import type { components } from "./generated";
 import type { SearchPaginationParams } from "./types";
 
+/** Fields available for sorting the artists list. */
+export type ArtistSortField = "name" | "song_count";
+
+/** Query parameters for the artist list endpoint. */
+export type ArtistListParams = SearchPaginationParams & {
+  /** Field to sort by. Defaults to `name`. */
+  sort?: ArtistSortField;
+  /** Sort direction. Defaults to `asc`. */
+  sort_dir?: "asc" | "desc";
+};
+
 export type ArtistSummary = components["schemas"]["ArtistSummary"];
 export type ArtistResponse = components["schemas"]["ArtistResponse"];
 export type ArtistLinkInfo = components["schemas"]["ArtistLinkInfo"];
@@ -23,7 +34,7 @@ export type ArtistLinkKind = (typeof ARTIST_LINK_KINDS)[number];
 /** Artist endpoints. */
 export const artistsApi = {
   /** Returns a paginated list of artists. */
-  list: (params?: SearchPaginationParams) => api.GET("/api/artists", { params: { query: params } }),
+  list: (params?: ArtistListParams) => api.GET("/api/artists", { params: { query: params } }),
 
   /** Returns a single artist by ID. */
   get: (id: string) => api.GET("/api/artists/{id}", { params: { path: { id } } }),

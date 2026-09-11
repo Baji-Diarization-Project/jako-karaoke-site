@@ -2,6 +2,7 @@
 
 pub(crate) mod artists;
 pub(crate) mod capabilities;
+pub(crate) mod common;
 pub(crate) mod performances;
 pub(crate) mod playlists;
 pub(crate) mod songs;
