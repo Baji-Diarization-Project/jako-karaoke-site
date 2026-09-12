@@ -32,48 +32,50 @@ pub async fn get_by_id(
     .map_err(DbError::from)
 }
 
-/// Returns songs matching an optional text query, ordered by ID descending.
+/// Returns songs matching an optional text query with a caller-specified sort order.
 ///
 /// When `q` is `Some`, results are filtered by a case-insensitive substring match
 /// against the song title or any linked original artist name.
+/// `order_by` must be a trusted SQL fragment (e.g. `"performance_count DESC, s.id DESC"`).
 pub async fn search(
     executor: impl Executor<'_, Database = MySql>,
     q: Option<&str>,
+    order_by: &str,
     limit: u32,
     offset: u32,
 ) -> Result<Vec<Song>> {
-    match q {
-        None => sqlx::query_as::<_, Song>(
+    let sql = if q.is_some() {
+        format!(
             "SELECT id, title, created_by, lyrics_id, \
              (SELECT COUNT(*) FROM performance_songs WHERE song_id = s.id) AS performance_count \
-             FROM songs s ORDER BY s.id DESC LIMIT ? OFFSET ?",
+             FROM songs s WHERE s.id IN ( \
+               SELECT id FROM songs WHERE title LIKE ? \
+               UNION \
+               SELECT soa.song_id FROM song_original_artists soa \
+               JOIN artists a ON a.id = soa.artist_id WHERE a.name LIKE ? \
+             ) ORDER BY {order_by} LIMIT ? OFFSET ?"
         )
+    } else {
+        format!(
+            "SELECT id, title, created_by, lyrics_id, \
+             (SELECT COUNT(*) FROM performance_songs WHERE song_id = s.id) AS performance_count \
+             FROM songs s ORDER BY {order_by} LIMIT ? OFFSET ?"
+        )
+    };
+
+    let query = sqlx::query_as::<_, Song>(sqlx::AssertSqlSafe(sql.as_str()));
+    let query = if let Some(pattern) = q.map(|q| format!("%{q}%")) {
+        query.bind(pattern.clone()).bind(pattern)
+    } else {
+        query
+    };
+
+    query
         .bind(limit)
         .bind(offset)
         .fetch_all(executor)
         .await
-        .map_err(DbError::from),
-        Some(q) => {
-            let pattern = format!("%{q}%");
-            sqlx::query_as::<_, Song>(
-                "SELECT id, title, created_by, lyrics_id, \
-                 (SELECT COUNT(*) FROM performance_songs WHERE song_id = s.id) AS performance_count \
-                 FROM songs s WHERE s.id IN ( \
-                   SELECT id FROM songs WHERE title LIKE ? \
-                   UNION \
-                   SELECT soa.song_id FROM song_original_artists soa \
-                   JOIN artists a ON a.id = soa.artist_id WHERE a.name LIKE ? \
-                 ) ORDER BY s.id DESC LIMIT ? OFFSET ?",
-            )
-            .bind(&pattern)
-            .bind(&pattern)
-            .bind(limit)
-            .bind(offset)
-            .fetch_all(executor)
-            .await
-            .map_err(DbError::from)
-        }
-    }
+        .map_err(DbError::from)
 }
 
 /// Returns the total number of songs matching the optional text query.
