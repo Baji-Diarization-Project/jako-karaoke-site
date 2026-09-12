@@ -182,6 +182,7 @@ pub(crate) async fn list_songs(
                 id: s.id,
                 title: s.title,
                 artists,
+                performance_count: s.performance_count as u64,
             }
         })
         .collect();

@@ -4172,7 +4172,8 @@
               "required": [
                 "id",
                 "title",
-                "artists"
+                "artists",
+                "performance_count"
               ],
               "properties": {
                 "artists": {
@@ -4184,6 +4185,12 @@
                 "id": {
                   "type": "string",
                   "format": "uuid"
+                },
+                "performance_count": {
+                  "type": "integer",
+                  "format": "int64",
+                  "description": "Number of performances that reference this song.",
+                  "minimum": 0
                 },
                 "title": {
                   "type": "string"
@@ -4568,7 +4575,8 @@
         "required": [
           "id",
           "title",
-          "artists"
+          "artists",
+          "performance_count"
         ],
         "properties": {
           "artists": {
@@ -4580,6 +4588,12 @@
           "id": {
             "type": "string",
             "format": "uuid"
+          },
+          "performance_count": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Number of performances that reference this song.",
+            "minimum": 0
           },
           "title": {
             "type": "string"
